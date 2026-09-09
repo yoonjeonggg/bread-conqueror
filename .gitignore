@@ -1,0 +1,52 @@
+# --- Secrets / local config (NEVER commit) ---
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.local.example
+*.pem
+*.key
+*.p12
+secrets.*
+credentials.*
+
+# --- Local databases / dumps ---
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+_smoke.db
+
+# --- Python ---
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# --- Node / Next ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- Logs / misc ---
+*.log
+.DS_Store
+
+# --- Editors / AI tooling (local only) ---
+.idea/
+.vscode/
+.claude/
+CLAUDE.local.md
+.claude-*
+.aider*
+.cursor/

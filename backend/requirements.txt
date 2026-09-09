@@ -1,0 +1,51 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Data / ORM
+sqlalchemy[asyncio]==2.0.36
+alembic==1.14.0
+aiomysql==0.2.0
+pymysql==1.1.1
+cryptography==44.0.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+email-validator==2.2.0
+
+# Auth
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+authlib==1.4.0
+
+# Cache / ranking
+redis==5.2.1
+
+# Email
+fastapi-mail==1.4.2
+
+# Media / geo
+pillow==11.0.0
+exifread==3.0.0
+
+# Storage / external
+boto3==1.35.90
+httpx==0.28.1
+qrcode==8.0
+
+# Background jobs
+apscheduler==3.11.0
+
+# Admin bulk ops
+openpyxl==3.1.5
+
+# Rate limiting
+slowapi==0.1.9
+
+# Dev / test
+pytest==8.3.4
+pytest-asyncio==0.25.0
+aiosqlite==0.20.0
+ruff==0.8.6
+mypy==1.14.1
