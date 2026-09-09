@@ -70,6 +70,24 @@ async def get_post(post_id: int, db: DbSession) -> Post:
     return post
 
 
+@router.get("/{post_id}/comments", response_model=list[CommentOut])
+async def list_comments(post_id: int, db: DbSession) -> list[Comment]:
+    return list(
+        (
+            await db.execute(
+                select(Comment)
+                .where(
+                    Comment.post_id == post_id,
+                    Comment.status == ContentStatus.PUBLISHED,
+                )
+                .order_by(Comment.created_at.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
 @router.post("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
     post = await db.get(Post, post_id)

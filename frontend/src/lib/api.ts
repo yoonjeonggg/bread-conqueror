@@ -1,9 +1,12 @@
 import type {
+  Comment,
   ConquestResponse,
   Flag,
+  FollowCounts,
   Post,
   Profile,
   RankingResponse,
+  Review,
   Store,
 } from "./types";
 
@@ -113,10 +116,77 @@ export const api = {
 
   myFlags: () => request<Flag[]>("/flags/me", { auth: true }),
 
+  exifPreview: (imageBase64: string) =>
+    request<{
+      captured_at: string | null;
+      lat: number | null;
+      lng: number | null;
+      has_gps: boolean;
+      trust: "HIGH" | "MEDIUM" | "LOW";
+    }>("/flags/exif-preview", {
+      method: "POST",
+      body: { image_base64: imageBase64 },
+      auth: true,
+    }),
+
+  // reviews
+  reviews: (storeId: number) =>
+    request<Review[]>(`/stores/${storeId}/reviews`),
+
+  upsertReview: (storeId: number, rating: number, content?: string) =>
+    request<Review>(`/stores/${storeId}/reviews`, {
+      method: "POST",
+      body: { rating, content: content || null },
+      auth: true,
+    }),
+
+  // social
+  followCounts: (userId: number) =>
+    request<FollowCounts>(`/users/${userId}/follow-counts`, { auth: true }),
+
+  follow: (userId: number) =>
+    request<void>(`/users/${userId}/follow`, { method: "POST", auth: true }),
+
+  unfollow: (userId: number) =>
+    request<void>(`/users/${userId}/follow`, { method: "DELETE", auth: true }),
+
+  report: (targetType: "FLAG" | "POST" | "COMMENT", targetId: number, reason: string) =>
+    request<{ id: number }>("/reports", {
+      method: "POST",
+      body: { target_type: targetType, target_id: targetId, reason },
+      auth: true,
+    }),
+
+  // rankings
   nationalRanking: () =>
     request<RankingResponse>("/rankings/national?limit=50", { auth: true }),
 
+  friendsRanking: () =>
+    request<RankingResponse>("/rankings/friends", { auth: true }),
+
+  // board
   posts: () => request<Post[]>("/posts"),
+
+  post: (id: number) => request<Post>(`/posts/${id}`),
+
+  postComments: (id: number) => request<Comment[]>(`/posts/${id}/comments`),
+
+  createPost: (title: string, content: string, storeId?: number) =>
+    request<Post>("/posts", {
+      method: "POST",
+      body: { title, content, store_id: storeId ?? null },
+      auth: true,
+    }),
+
+  addComment: (postId: number, content: string) =>
+    request<Comment>(`/posts/${postId}/comments`, {
+      method: "POST",
+      body: { content },
+      auth: true,
+    }),
+
+  likePost: (postId: number) =>
+    request<void>(`/posts/${postId}/like`, { method: "POST", auth: true }),
 
   adminDashboard: () =>
     request<{
@@ -126,5 +196,26 @@ export const api = {
       gold_ratio: number;
       flags_this_week: number;
       pending_review: number;
+      pending_reports: number;
+      suspended_users: number;
+      average_store_rating: number | null;
     }>("/admin/stats/dashboard", { auth: true }),
+
+  adminReports: () =>
+    request<
+      {
+        id: number;
+        target_type: string;
+        target_id: number;
+        reason: string;
+        status: string;
+        created_at: string;
+      }[]
+    >("/admin/reports", { auth: true }),
+
+  resolveReport: (reportId: number, status = "REVIEWED") =>
+    request<{ id: number; status: string }>(
+      `/admin/reports/${reportId}/resolve`,
+      { method: "POST", body: { status }, auth: true },
+    ),
 };

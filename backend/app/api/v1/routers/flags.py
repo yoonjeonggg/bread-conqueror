@@ -1,4 +1,8 @@
+import base64
+import binascii
+
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -10,6 +14,7 @@ from app.models.store import Store
 from app.models.user import UserStat
 from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
 from app.services import flag_service, ranking_service
+from app.utils.exif import extract
 
 router = APIRouter(prefix="/flags", tags=["flags"])
 
@@ -73,6 +78,48 @@ async def my_flags(db: DbSession, user: CurrentUser) -> list[Flag]:
         )
         .scalars()
         .all()
+    )
+
+
+class ExifPreviewRequest(BaseModel):
+    image_base64: str = Field(min_length=1)
+
+
+class ExifPreviewResponse(BaseModel):
+    captured_at: str | None
+    lat: float | None
+    lng: float | None
+    has_gps: bool
+    trust: str
+
+
+@router.post("/exif-preview", response_model=ExifPreviewResponse)
+async def exif_preview(
+    payload: ExifPreviewRequest, user: CurrentUser
+) -> ExifPreviewResponse:
+    """F-CONQ-05 — 실버 깃발 사진의 EXIF를 미리 읽어 신뢰도를 가늠한다."""
+    raw = payload.image_base64.split(",", 1)[-1]
+    try:
+        data = base64.b64decode(raw, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="이미지 디코딩 실패"
+        ) from exc
+
+    info = extract(data)
+    if info.captured_at and info.has_gps:
+        trust = "HIGH"
+    elif info.captured_at or info.has_gps:
+        trust = "MEDIUM"
+    else:
+        trust = "LOW"
+
+    return ExifPreviewResponse(
+        captured_at=info.captured_at.isoformat() if info.captured_at else None,
+        lat=info.lat,
+        lng=info.lng,
+        has_gps=info.has_gps,
+        trust=trust,
     )
 
 

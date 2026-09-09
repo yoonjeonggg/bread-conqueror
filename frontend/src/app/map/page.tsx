@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import Link from "next/link";
+
 import { StoreCard } from "@/components/StoreCard";
 import { DEFAULT_COORDS, useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
@@ -71,7 +73,12 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="section-title">주변 베이커리</div>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <div className="section-title">주변 베이커리</div>
+        <Link href="/stores/new" className="link-accent" style={{ fontSize: 13 }}>
+          + 매장 등록
+        </Link>
+      </div>
       {loading && <div className="card list-empty">위치 확인 중…</div>}
       {status && <div className="card list-empty">{status}</div>}
       {!loading && !status && stores.length === 0 && (

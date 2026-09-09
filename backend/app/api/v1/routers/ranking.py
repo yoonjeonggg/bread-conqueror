@@ -3,8 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from app.core.dependencies import DbSession, OptionalUser
+from app.core.dependencies import CurrentUser, DbSession, OptionalUser
 from app.core.redis import redis_client
+from app.models.social import Follow
 from app.models.user import User, UserStat
 from app.schemas.ranking import RankingEntry, RankingResponse
 from app.services import ranking_service
@@ -95,3 +96,40 @@ async def regional_ranking(
     return RankingResponse(
         scope="regional", region_sido=region_sido, entries=entries, my_rank=my_rank
     )
+
+
+@router.get("/friends", response_model=RankingResponse)
+async def friends_ranking(db: DbSession, user: CurrentUser) -> RankingResponse:
+    """F-RANK-03 — 내가 팔로우한 사람 + 나, exp 내림차순."""
+    followee_ids = (
+        (
+            await db.execute(
+                select(Follow.followee_id).where(Follow.follower_id == user.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    ids = [*followee_ids, user.id]
+
+    rows = (
+        await db.execute(
+            select(User.id, User.nickname, UserStat.tier_level, UserStat.exp)
+            .join(UserStat, UserStat.user_id == User.id)
+            .where(User.id.in_(ids))
+            .order_by(UserStat.exp.desc())
+        )
+    ).all()
+
+    entries = [
+        RankingEntry(
+            rank=i + 1,
+            user_id=r.id,
+            nickname=r.nickname,
+            tier_level=r.tier_level,
+            exp=r.exp,
+        )
+        for i, r in enumerate(rows)
+    ]
+    my_rank = next((e.rank for e in entries if e.user_id == user.id), None)
+    return RankingResponse(scope="friends", entries=entries, my_rank=my_rank)

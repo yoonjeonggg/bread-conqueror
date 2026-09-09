@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { FlagCount, VerifiedBadge } from "@/components/badges";
+import { ReportButton } from "@/components/ReportButton";
+import { ReviewSection } from "@/components/ReviewSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Flag, Store } from "@/lib/types";
@@ -91,19 +93,28 @@ export default function StoreDetailPage() {
         </Link>
       )}
 
+      <ReviewSection storeId={store.id} />
+
       <div className="section-title">최근 깃발</div>
       {flags.length === 0 ? (
         <div className="card list-empty">아직 이 빵집에 깃발이 없습니다.</div>
       ) : (
         flags.slice(0, 20).map((f) => (
-          <div key={f.id} className="card row" style={{ justifyContent: "space-between" }}>
-            <span className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}>
-              {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"}
-            </span>
-            <span className="muted" style={{ fontSize: 12 }}>
-              {new Date(f.created_at).toLocaleDateString("ko-KR")}
-              {f.upgraded_from_silver ? " · 업그레이드" : ""}
-            </span>
+          <div key={f.id} className="card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span
+                className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}
+              >
+                {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"}
+              </span>
+              <span className="muted" style={{ fontSize: 12 }}>
+                {new Date(f.created_at).toLocaleDateString("ko-KR")}
+                {f.upgraded_from_silver ? " · 업그레이드" : ""}
+              </span>
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <ReportButton targetType="FLAG" targetId={f.id} label="이 인증 신고" />
+            </div>
           </div>
         ))
       )}
