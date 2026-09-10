@@ -7,19 +7,29 @@ import { useEffect, useState } from "react";
 import { TierBadge } from "@/components/badges";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Flag } from "@/lib/types";
+import type { Flag, StoreClaim } from "@/lib/types";
+
+const CLAIM_LABEL: Record<string, string> = {
+  PENDING: "심사 중",
+  APPROVED: "인증됨",
+  REJECTED: "반려됨",
+};
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
   const [flags, setFlags] = useState<Flag[]>([]);
+  const [claims, setClaims] = useState<StoreClaim[]>([]);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user) api.myFlags().then(setFlags).catch(() => setFlags([]));
+    if (user) {
+      api.myFlags().then(setFlags).catch(() => setFlags([]));
+      api.myClaims().then(setClaims).catch(() => setClaims([]));
+    }
   }, [user]);
 
   if (!user)
@@ -96,6 +106,35 @@ export default function ProfilePage() {
             🛠️ 관리자 대시보드
           </button>
         </Link>
+      )}
+
+      {claims.length > 0 && (
+        <>
+          <div className="section-title">매장 소유권 신청</div>
+          {claims.map((c) => (
+            <div
+              key={c.id}
+              className="card row"
+              style={{ justifyContent: "space-between", display: "flex" }}
+            >
+              <Link href={`/stores/${c.store_id}`} className="link-accent">
+                {c.store_name}
+              </Link>
+              <span
+                className={`badge ${
+                  c.status === "APPROVED"
+                    ? "badge-verified"
+                    : c.status === "REJECTED"
+                      ? "badge-silver"
+                      : "badge-gold"
+                }`}
+              >
+                {CLAIM_LABEL[c.status] ?? c.status}
+                {c.review_note ? ` · ${c.review_note}` : ""}
+              </span>
+            </div>
+          ))}
+        </>
       )}
 
       <div className="section-title">내 깃발 기록</div>

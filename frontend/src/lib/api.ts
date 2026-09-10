@@ -1,13 +1,16 @@
 import type {
+  AdminClaim,
   Comment,
   ConquestResponse,
   Flag,
   FollowCounts,
   Post,
   Profile,
+  QrToken,
   RankingResponse,
   Review,
   Store,
+  StoreClaim,
 } from "./types";
 
 const BASE =
@@ -116,6 +119,13 @@ export const api = {
 
   myFlags: () => request<Flag[]>("/flags/me", { auth: true }),
 
+  conquerByQr: (token: string) =>
+    request<ConquestResponse>("/flags/qr", {
+      method: "POST",
+      body: { token },
+      auth: true,
+    }),
+
   exifPreview: (imageBase64: string) =>
     request<{
       captured_at: string | null;
@@ -157,6 +167,46 @@ export const api = {
       auth: true,
     }),
 
+  // 매장 소유권 신청 / QR (로드맵 5단계)
+  createClaim: (
+    storeId: number,
+    body: { business_license_image_url: string; contact_phone: string },
+  ) =>
+    request<StoreClaim>(`/stores/${storeId}/claims`, {
+      method: "POST",
+      body,
+      auth: true,
+    }),
+
+  myClaims: () => request<StoreClaim[]>("/me/claims", { auth: true }),
+
+  storeQrTokens: (storeId: number) =>
+    request<QrToken[]>(`/stores/${storeId}/qr-tokens`, { auth: true }),
+
+  createQrToken: (
+    storeId: number,
+    body: { label?: string | null; max_uses?: number | null; expires_in_hours?: number | null },
+  ) =>
+    request<QrToken>(`/stores/${storeId}/qr-tokens`, {
+      method: "POST",
+      body,
+      auth: true,
+    }),
+
+  revokeQrToken: (storeId: number, tokenId: number) =>
+    request<void>(`/stores/${storeId}/qr-tokens/${tokenId}`, {
+      method: "DELETE",
+      auth: true,
+    }),
+
+  adminClaims: () => request<AdminClaim[]>("/admin/claims", { auth: true }),
+
+  reviewClaim: (claimId: number, approve: boolean, note?: string) =>
+    request<StoreClaim>(
+      `/admin/claims/${claimId}/${approve ? "approve" : "reject"}`,
+      { method: "POST", body: { note: note ?? null }, auth: true },
+    ),
+
   // rankings
   nationalRanking: () =>
     request<RankingResponse>("/rankings/national?limit=50", { auth: true }),
@@ -197,6 +247,7 @@ export const api = {
       flags_this_week: number;
       pending_review: number;
       pending_reports: number;
+      pending_claims: number;
       suspended_users: number;
       average_store_rating: number | null;
     }>("/admin/stats/dashboard", { auth: true }),

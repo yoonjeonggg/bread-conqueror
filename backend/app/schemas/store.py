@@ -34,6 +34,7 @@ class StoreOut(StoreBase):
     id: int
     created_source: StoreCreatedSource
     is_verified_owner: bool
+    owner_id: int | None = None
     status: StoreStatus
     stat: StoreStatOut | None = None
 

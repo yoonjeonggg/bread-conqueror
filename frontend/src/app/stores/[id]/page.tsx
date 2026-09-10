@@ -93,6 +93,21 @@ export default function StoreDetailPage() {
         </Link>
       )}
 
+      {user && store.owner_id === user.id && (
+        <Link href={`/stores/${store.id}/manage`}>
+          <button className="btn btn-secondary" style={{ marginTop: 10 }}>
+            🏪 매장 관리 · QR 발급
+          </button>
+        </Link>
+      )}
+      {user && store.owner_id == null && (
+        <Link href={`/stores/${store.id}/claim`}>
+          <button className="btn btn-ghost" style={{ marginTop: 10 }}>
+            이 매장의 사장님이신가요? 소유권 신청
+          </button>
+        </Link>
+      )}
+
       <ReviewSection storeId={store.id} />
 
       <div className="section-title">최근 깃발</div>

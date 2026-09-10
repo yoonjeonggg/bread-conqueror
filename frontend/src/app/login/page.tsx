@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +10,12 @@ import { useAuth } from "@/lib/auth";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const [next, setNext] = useState("/");
+
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get("next");
+    if (n && n.startsWith("/")) setNext(n);
+  }, []);
   const [email, setEmail] = useState("demo@bread.dev");
   const [password, setPassword] = useState("demo1234");
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +27,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-      router.replace("/");
+      router.replace(next);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "로그인에 실패했습니다.");
     } finally {

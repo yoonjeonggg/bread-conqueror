@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentAdmin, DbSession
 from app.models.enums import (
+    ClaimStatus,
     FlagStatus,
     FlagType,
     ReportStatus,
@@ -27,6 +28,7 @@ from app.models.policy import AdminActionLog
 from app.models.post import Comment, Post
 from app.models.social import Report
 from app.models.store import Store, StoreStat
+from app.models.store_claim import StoreClaim
 from app.models.user import User, UserStat
 from app.schemas.admin import (
     AdjustExpRequest,
@@ -38,6 +40,7 @@ from app.schemas.admin import (
     ResolveReportRequest,
     SuspendRequest,
 )
+from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
 from app.services import tier_service
 
@@ -234,6 +237,119 @@ async def moderate_comment(
     return {"comment_id": comment_id, "status": payload.status}
 
 
+# --- 매장 소유권 신청 (로드맵 5단계) --------------------------------
+
+
+@router.get("/claims", response_model=list[AdminClaimOut])
+async def list_claims(
+    db: DbSession, admin: CurrentAdmin, only_pending: bool = True
+) -> list[AdminClaimOut]:
+    stmt = (
+        select(StoreClaim, Store.name, User.nickname)
+        .join(Store, Store.id == StoreClaim.store_id)
+        .join(User, User.id == StoreClaim.user_id)
+        .order_by(StoreClaim.created_at.desc())
+        .limit(200)
+    )
+    if only_pending:
+        stmt = stmt.where(StoreClaim.status == ClaimStatus.PENDING)
+    rows = (await db.execute(stmt)).all()
+    return [
+        AdminClaimOut.model_validate(
+            {**claim.__dict__, "store_name": store_name, "user_nickname": nickname}
+        )
+        for claim, store_name, nickname in rows
+    ]
+
+
+async def _decide_claim(
+    db: AsyncSession,
+    admin: User,
+    claim_id: int,
+    approve: bool,
+    note: str | None,
+) -> StoreClaim:
+    claim = await db.get(StoreClaim, claim_id)
+    if claim is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if claim.status is not ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 처리된 신청입니다."
+        )
+
+    now = datetime.utcnow()
+    claim.reviewed_by = admin.id
+    claim.reviewed_at = now
+    claim.review_note = note
+
+    if approve:
+        store = await db.get(Store, claim.store_id)
+        if store is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        if store.owner_id is not None and store.owner_id != claim.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 다른 소유자가 인증된 매장입니다.",
+            )
+        claim.status = ClaimStatus.APPROVED
+        store.owner_id = claim.user_id
+        store.is_verified_owner = True
+
+        # 같은 매장의 다른 대기 신청은 자동 반려
+        others = (
+            (
+                await db.execute(
+                    select(StoreClaim).where(
+                        StoreClaim.store_id == claim.store_id,
+                        StoreClaim.id != claim.id,
+                        StoreClaim.status == ClaimStatus.PENDING,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for other in others:
+            other.status = ClaimStatus.REJECTED
+            other.reviewed_by = admin.id
+            other.reviewed_at = now
+            other.review_note = "다른 신청이 승인되었습니다."
+    else:
+        claim.status = ClaimStatus.REJECTED
+
+    _log(
+        db,
+        admin.id,
+        "CLAIM_APPROVE" if approve else "CLAIM_REJECT",
+        "STORE_CLAIM",
+        claim_id,
+        note,
+    )
+    await db.commit()
+    await db.refresh(claim)
+    return claim
+
+
+@router.post("/claims/{claim_id}/approve", response_model=ClaimOut)
+async def approve_claim(
+    claim_id: int,
+    payload: ClaimReviewRequest,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> StoreClaim:
+    return await _decide_claim(db, admin, claim_id, approve=True, note=payload.note)
+
+
+@router.post("/claims/{claim_id}/reject", response_model=ClaimOut)
+async def reject_claim(
+    claim_id: int,
+    payload: ClaimReviewRequest,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> StoreClaim:
+    return await _decide_claim(db, admin, claim_id, approve=False, note=payload.note)
+
+
 # --- 대시보드 (F-ADMIN-10) --------------------------------------------
 
 
@@ -261,6 +377,9 @@ async def dashboard(db: DbSession, admin: CurrentAdmin) -> DashboardOut:
         flags_this_week=await count(Flag, Flag.created_at >= week_ago),
         pending_review=await count(Flag, Flag.is_flagged.is_(True)),
         pending_reports=await count(Report, Report.status == ReportStatus.PENDING),
+        pending_claims=await count(
+            StoreClaim, StoreClaim.status == ClaimStatus.PENDING
+        ),
         suspended_users=await count(User, User.status == UserStatus.SUSPENDED),
         average_store_rating=round(avg_rating, 2) if avg_rating is not None else None,
     )

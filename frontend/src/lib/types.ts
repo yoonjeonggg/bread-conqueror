@@ -39,6 +39,7 @@ export interface Store {
   thumbnail_url: string | null;
   created_source: "AUTO_COLLECTED" | "USER_ADDED";
   is_verified_owner: boolean;
+  owner_id: number | null;
   status: string;
   stat: StoreStat | null;
   distance_m?: number | null;
@@ -119,6 +120,38 @@ export interface Post {
   created_at: string;
   author_tier_snapshot: number;
   author_flag_count_snapshot: number;
+}
+
+export type ClaimStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface StoreClaim {
+  id: number;
+  store_id: number;
+  user_id: number;
+  status: ClaimStatus;
+  review_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  store_name: string;
+}
+
+export interface QrToken {
+  id: number;
+  store_id: number;
+  token: string;
+  label: string | null;
+  max_uses: number | null;
+  use_count: number;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  active: boolean;
+}
+
+export interface AdminClaim extends StoreClaim {
+  user_nickname: string;
+  business_license_image_url: string;
+  contact_phone: string;
 }
 
 export const TIER_NAMES: Record<number, string> = {

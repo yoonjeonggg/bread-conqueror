@@ -139,6 +139,7 @@ async def create_flag(
     evidence_type: EvidenceType,
     evidence_image_url: str | None,
     visited_at: datetime | None,
+    via_qr: bool = False,
 ) -> ConquestResult:
     now = datetime.utcnow()
     await _check_cooldown(db, user.id, store.id)
@@ -162,7 +163,13 @@ async def create_flag(
     is_flagged = False
     abuse_reasons: list[str] = []
 
-    if flag_type is FlagType.GOLD:
+    if flag_type is FlagType.GOLD and via_qr:
+        # 매장에 붙은 QR을 스캔했다는 것 자체가 현장 방문 증빙이므로
+        # 반경/속도 검사를 건너뛴다.
+        if evidence_type is EvidenceType.NONE:
+            evidence_type = EvidenceType.QR
+        exp_granted = gold_exp
+    elif flag_type is FlagType.GOLD:
         if lat is None or lng is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

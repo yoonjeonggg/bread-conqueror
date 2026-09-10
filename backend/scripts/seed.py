@@ -6,6 +6,7 @@ Usage (from backend/):  python -m scripts.seed
 from __future__ import annotations
 
 import asyncio
+import secrets
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -15,6 +16,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.enums import StoreCreatedSource, StoreStatus, UserRole
 from app.models.policy import PolicyConfig, TierPolicy
 from app.models.store import Store, StoreStat
+from app.models.store_qr_token import StoreQrToken
 from app.models.user import User, UserStat
 
 POLICY_CONFIGS = [
@@ -104,6 +106,27 @@ async def seed() -> None:
                 )
                 store.stat = StoreStat()
                 db.add(store)
+
+        await db.flush()
+
+        # 데모: demo 계정을 '밀도 성수' 인증 소유자로 연결하고 정복용 QR 토큰 발급
+        demo_user = (
+            await db.execute(select(User).where(User.email == "demo@bread.dev"))
+        ).scalar_one_or_none()
+        mildo = (
+            await db.execute(select(Store).where(Store.name == "밀도 성수"))
+        ).scalar_one_or_none()
+        if demo_user is not None and mildo is not None and mildo.owner_id is None:
+            mildo.owner_id = demo_user.id
+            mildo.is_verified_owner = True
+            db.add(
+                StoreQrToken(
+                    store_id=mildo.id,
+                    token=secrets.token_urlsafe(24),
+                    created_by=demo_user.id,
+                    label="데모 카운터 QR",
+                )
+            )
 
         await db.commit()
     print("seed complete: policies, tiers, admin@bread.dev / demo@bread.dev, demo stores")

@@ -23,6 +23,7 @@ from app.models.review import Review
 from app.models.social import Follow, Report
 from app.models.store import Store, StoreStat
 from app.models.store_claim import StoreClaim
+from app.models.store_qr_token import StoreQrToken
 from app.models.user import User, UserStat
 
 __all__ = [
@@ -45,6 +46,7 @@ __all__ = [
     "Store",
     "StoreClaim",
     "StoreCreatedSource",
+    "StoreQrToken",
     "StoreStat",
     "StoreStatus",
     "TierPolicy",

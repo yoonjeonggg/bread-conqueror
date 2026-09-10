@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.routers import (
     admin,
     auth,
+    claims,
     flags,
     posts,
     ranking,
@@ -21,4 +22,5 @@ api_router.include_router(flags.router)
 api_router.include_router(ranking.router)
 api_router.include_router(posts.router)
 api_router.include_router(social.router)
+api_router.include_router(claims.router)
 api_router.include_router(admin.router)

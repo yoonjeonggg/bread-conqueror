@@ -1,5 +1,6 @@
 import base64
 import binascii
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -8,10 +9,12 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.core.redis import redis_client
-from app.models.enums import StoreStatus
+from app.models.enums import EvidenceType, FlagType, StoreStatus
 from app.models.flag import Flag
 from app.models.store import Store
+from app.models.store_qr_token import StoreQrToken
 from app.models.user import UserStat
+from app.schemas.claim import QrConquerRequest
 from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
 from app.services import flag_service, ranking_service
 from app.utils.exif import extract
@@ -46,6 +49,71 @@ async def create_flag(
         evidence_image_url=payload.evidence_image_url,
         visited_at=payload.visited_at,
     )
+    await db.commit()
+    await db.refresh(result.flag)
+
+    user_stat = await db.get(UserStat, user.id)
+    if user_stat is not None:
+        await ranking_service.set_score(
+            redis_client, user.id, user_stat.exp, store.region_sido
+        )
+
+    return ConquestResponse(
+        flag=FlagOut.model_validate(result.flag),
+        exp_granted=result.exp_granted,
+        tier_changed=result.tier_changed,
+        new_tier_level=result.new_tier_level,
+        upgraded_from_silver=result.upgraded_from_silver,
+        is_flagged=result.is_flagged,
+        abuse_reasons=result.abuse_reasons,
+    )
+
+
+@router.post("/qr", response_model=ConquestResponse, status_code=status.HTTP_201_CREATED)
+async def conquer_by_qr(
+    payload: QrConquerRequest, db: DbSession, user: CurrentUser
+) -> ConquestResponse:
+    """매장에 부착된 QR 토큰으로 골드 깃발을 발급한다 (F-CONQ / 로드맵 5단계)."""
+    token = (
+        await db.execute(
+            select(StoreQrToken).where(StoreQrToken.token == payload.token)
+        )
+    ).scalar_one_or_none()
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="유효하지 않은 QR입니다."
+        )
+    if not token.is_active(datetime.utcnow()):
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="만료되었거나 사용 한도에 도달한 QR입니다.",
+        )
+
+    store = (
+        await db.execute(
+            select(Store)
+            .options(selectinload(Store.stat))
+            .where(Store.id == token.store_id)
+        )
+    ).scalar_one_or_none()
+    if store is None or store.status == StoreStatus.CLOSED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
+        )
+
+    result = await flag_service.create_flag(
+        db,
+        user=user,
+        store=store,
+        flag_type=FlagType.GOLD,
+        lat=None,
+        lng=None,
+        evidence_type=EvidenceType.QR,
+        evidence_image_url=None,
+        visited_at=None,
+        via_qr=True,
+    )
+    token.use_count += 1
     await db.commit()
     await db.refresh(result.flag)
 
