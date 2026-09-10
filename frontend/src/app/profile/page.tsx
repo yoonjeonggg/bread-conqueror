@@ -100,9 +100,15 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <Link href="/missions">
+        <button className="btn btn-secondary" style={{ marginTop: 16 }}>
+          🎯 이번 주 미션
+        </button>
+      </Link>
+
       {user.role === "ADMIN" && (
         <Link href="/admin">
-          <button className="btn btn-secondary" style={{ marginTop: 16 }}>
+          <button className="btn btn-secondary" style={{ marginTop: 10 }}>
             🛠️ 관리자 대시보드
           </button>
         </Link>

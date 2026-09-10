@@ -154,6 +154,23 @@ export interface AdminClaim extends StoreClaim {
   contact_phone: string;
 }
 
+export interface WeeklyMission {
+  code: string;
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward_exp: number;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+}
+
+export interface WeeklyMissions {
+  week_start: string;
+  missions: WeeklyMission[];
+}
+
 export type NotificationType =
   | "FOLLOW"
   | "POST_COMMENT"

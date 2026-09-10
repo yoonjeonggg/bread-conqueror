@@ -13,7 +13,13 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
-from app.models.enums import StoreCreatedSource, StoreStatus, UserRole
+from app.models.enums import (
+    MissionMetric,
+    StoreCreatedSource,
+    StoreStatus,
+    UserRole,
+)
+from app.models.mission import MissionDefinition
 from app.models.policy import PolicyConfig, TierPolicy
 from app.models.store import Store, StoreStat
 from app.models.store_qr_token import StoreQrToken
@@ -28,6 +34,20 @@ POLICY_CONFIGS = [
     ("GOLD_EXP", "100", "골드 깃발 경험치"),
     ("SILVER_EXP_RATIO", "0.5", "실버 깃발 경험치 비율"),
     ("ABUSE_SPEED_KMH", "150", "이상 탐지 이동 속도 임계값(km/h)"),
+]
+
+# (code, title, description, metric, target, reward_exp, sort_order)
+MISSIONS = [
+    ("WEEKLY_GOLD_3", "골드 사냥꾼", "이번 주에 골드 깃발 3개 꽂기",
+     MissionMetric.GOLD_FLAGS, 3, 150, 10),
+    ("WEEKLY_ANY_5", "부지런한 빵순이", "이번 주에 깃발 5개 꽂기",
+     MissionMetric.TOTAL_FLAGS, 5, 100, 20),
+    ("WEEKLY_REVIEW_2", "리뷰어", "이번 주에 리뷰 2개 남기기",
+     MissionMetric.REVIEWS, 2, 80, 30),
+    ("WEEKLY_EXPLORE_3", "탐험가", "이번 주에 서로 다른 빵집 3곳 정복",
+     MissionMetric.DISTINCT_STORES, 3, 120, 40),
+    ("WEEKLY_REGION_2", "원정대", "이번 주에 2개 이상 지역에서 정복",
+     MissionMetric.DISTINCT_REGIONS, 2, 200, 50),
 ]
 
 TIER_POLICIES = [
@@ -65,6 +85,20 @@ async def seed() -> None:
                         tier_name=name,
                         required_exp=exp,
                         gold_ratio_requirement=ratio,
+                    )
+                )
+
+        for code, title, desc, metric, target, reward, order in MISSIONS:
+            if await db.get(MissionDefinition, code) is None:
+                db.add(
+                    MissionDefinition(
+                        code=code,
+                        title=title,
+                        description=desc,
+                        metric=metric,
+                        target=target,
+                        reward_exp=reward,
+                        sort_order=order,
                     )
                 )
 

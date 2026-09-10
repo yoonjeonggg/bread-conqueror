@@ -12,6 +12,7 @@ import type {
   Review,
   Store,
   StoreClaim,
+  WeeklyMissions,
 } from "./types";
 
 const BASE =
@@ -201,6 +202,19 @@ export const api = {
     }),
 
   adminClaims: () => request<AdminClaim[]>("/admin/claims", { auth: true }),
+
+  // 주간 미션 (로드맵 8단계)
+  weeklyMissions: () =>
+    request<WeeklyMissions>("/missions/weekly", { auth: true }),
+
+  claimMission: (code: string) =>
+    request<{
+      code: string;
+      reward_exp: number;
+      exp: number;
+      tier_level: number;
+      tier_changed: boolean;
+    }>(`/missions/${code}/claim`, { method: "POST", auth: true }),
 
   // 알림 (로드맵 6단계)
   notifications: (onlyUnread = false) =>
