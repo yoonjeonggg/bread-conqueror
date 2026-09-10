@@ -3,10 +3,11 @@
 - F-ADMIN-01/02  깃발 검토 큐 · 승인/무효화 · 이상탐지 목록
 - F-ADMIN-07     계정 정지 / 해제
 - F-ADMIN-08     경험치·티어 수동 조정
+- F-ADMIN-04     중복 매장 병합
 - F-ADMIN-09     신고 처리 · 게시글/댓글 모더레이션
 - F-ADMIN-10     통계 대시보드
 
-아직 스텁: 매장 병합(F-ADMIN-04), 엑셀 대량 업로드(F-ADMIN-05).
+아직 스텁: 엑셀 대량 업로드(F-ADMIN-05).
 """
 
 from datetime import datetime, timedelta
@@ -39,11 +40,13 @@ from app.schemas.admin import (
     DashboardOut,
     ModerateRequest,
     ResolveReportRequest,
+    StoreMergeRequest,
+    StoreMergeResult,
     SuspendRequest,
 )
 from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
-from app.services import notification_service, tier_service
+from app.services import notification_service, store_service, tier_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -405,6 +408,38 @@ async def reject_claim(
     admin: CurrentAdmin,
 ) -> StoreClaim:
     return await _decide_claim(db, admin, claim_id, approve=False, note=payload.note)
+
+
+# --- 매장 병합 (F-ADMIN-04) ------------------------------------------
+
+
+@router.post("/stores/{target_id}/merge", response_model=StoreMergeResult)
+async def merge_store(
+    target_id: int,
+    payload: StoreMergeRequest,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> StoreMergeResult:
+    target = await db.get(Store, target_id)
+    source = await db.get(Store, payload.source_id)
+    if target is None or source is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
+        )
+
+    result = await store_service.merge_stores(db, target=target, source=source)
+    _log(
+        db,
+        admin.id,
+        "STORE_MERGE",
+        "STORE",
+        target_id,
+        f"source={source.id}; flags={result.moved_flags}; "
+        f"reviews={result.moved_reviews}(-{result.dropped_duplicate_reviews}); "
+        f"{payload.note or ''}",
+    )
+    await db.commit()
+    return StoreMergeResult(**vars(result))
 
 
 # --- 대시보드 (F-ADMIN-10) --------------------------------------------

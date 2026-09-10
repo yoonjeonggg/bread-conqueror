@@ -54,6 +54,23 @@ class AdjustResultOut(BaseModel):
     tier_changed: bool
 
 
+class StoreMergeRequest(BaseModel):
+    source_id: int = Field(gt=0)
+    note: str | None = Field(default=None, max_length=255)
+
+
+class StoreMergeResult(BaseModel):
+    target_id: int
+    source_id: int
+    moved_flags: int
+    moved_reviews: int
+    dropped_duplicate_reviews: int
+    moved_posts: int
+    moved_claims: int
+    moved_qr_tokens: int
+    owner_inherited: bool
+
+
 class DashboardOut(BaseModel):
     total_users: int
     total_stores: int

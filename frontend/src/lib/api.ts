@@ -225,6 +225,23 @@ export const api = {
       { method: "POST", body: { note: note ?? null }, auth: true },
     ),
 
+  mergeStores: (targetId: number, sourceId: number, note?: string) =>
+    request<{
+      target_id: number;
+      source_id: number;
+      moved_flags: number;
+      moved_reviews: number;
+      dropped_duplicate_reviews: number;
+      moved_posts: number;
+      moved_claims: number;
+      moved_qr_tokens: number;
+      owner_inherited: boolean;
+    }>(`/admin/stores/${targetId}/merge`, {
+      method: "POST",
+      body: { source_id: sourceId, note: note ?? null },
+      auth: true,
+    }),
+
   // rankings
   nationalRanking: () =>
     request<RankingResponse>("/rankings/national?limit=50", { auth: true }),
