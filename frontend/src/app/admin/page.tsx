@@ -18,6 +18,10 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [claims, setClaims] = useState<AdminClaim[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [mergeTarget, setMergeTarget] = useState("");
+  const [mergeSource, setMergeSource] = useState("");
+  const [mergeMsg, setMergeMsg] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
 
   const loadReports = () =>
     api.adminReports().then(setReports).catch(() => setReports([]));
@@ -171,6 +175,71 @@ export default function AdminPage() {
         ))
       )}
 
+      <div className="section-title">중복 매장 병합 (F-ADMIN-04)</div>
+      <div className="card">
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          <strong>병합 대상(target)</strong>에 <strong>원본(source)</strong>의 깃발·리뷰·게시글·QR·
+          소유권 신청을 모두 이관하고, 원본은 폐점 처리합니다. 되돌릴 수 없습니다.
+        </p>
+        <div className="row" style={{ gap: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="mt">대상 매장 ID (남길 쪽)</label>
+            <input
+              id="mt"
+              value={mergeTarget}
+              inputMode="numeric"
+              onChange={(e) => setMergeTarget(e.target.value.replace(/\D/g, ""))}
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="ms">원본 매장 ID (폐점될 쪽)</label>
+            <input
+              id="ms"
+              value={mergeSource}
+              inputMode="numeric"
+              onChange={(e) => setMergeSource(e.target.value.replace(/\D/g, ""))}
+            />
+          </div>
+        </div>
+        {mergeMsg && (
+          <p
+            style={{ fontSize: 13, margin: "4px 0 8px" }}
+            className={mergeMsg.startsWith("✅") ? "link-accent" : "error-text"}
+          >
+            {mergeMsg}
+          </p>
+        )}
+        <button
+          className="btn btn-ghost"
+          disabled={merging || !mergeTarget || !mergeSource}
+          onClick={async () => {
+            setMergeMsg(null);
+            setMerging(true);
+            try {
+              const res = await api.mergeStores(
+                Number(mergeTarget),
+                Number(mergeSource),
+              );
+              setMergeMsg(
+                `✅ 병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
+                  ` (중복 ${res.dropped_duplicate_reviews} 폐기), 게시글 ${res.moved_posts}` +
+                  (res.owner_inherited ? ", 소유자 승계됨" : ""),
+              );
+              setMergeSource("");
+              api.adminDashboard().then(setData).catch(() => {});
+            } catch (e) {
+              setMergeMsg(
+                e instanceof Error ? e.message : "병합에 실패했습니다.",
+              );
+            } finally {
+              setMerging(false);
+            }
+          }}
+        >
+          {merging ? "병합 중…" : "병합 실행"}
+        </button>
+      </div>
+
       <div className="section-title">운영 메뉴 (API)</div>
       <div className="card muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
         · 깃발 검토 큐 <code>GET /admin/flags/review-queue</code>
@@ -178,7 +247,7 @@ export default function AdminPage() {
         <br />· 경험치 조정 <code>POST /admin/users/&#123;id&#125;/adjust-exp</code>
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
         <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
-        <br />· 매장 병합 · 엑셀 대량 업로드 — 다음 스프린트
+        <br />· 엑셀/CSV 대량 업로드 — 다음 스프린트
       </div>
     </div>
   );

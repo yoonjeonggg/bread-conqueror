@@ -106,6 +106,7 @@ ruff check .
 | F-STORE-05 매장 소유권 Claim | `POST /stores/{id}/claims` → 관리자 승인 시 `store.owner_id` 연결 |
 | F-CONQ-11 QR 정복 | 소유자가 `POST /stores/{id}/qr-tokens` 발급 → 손님 `POST /flags/qr` (GPS 없이 골드) |
 | F-ADMIN-01/02 | `GET /admin/flags/review-queue`, `POST .../approve\|invalidate` |
+| F-ADMIN-04 매장 병합 | `POST /admin/stores/{target}/merge` — 참조 이관·집계 재계산·source 폐점 (`services/store_service.py`) |
 | F-ADMIN-06 Claim 심사 | `GET /admin/claims`, `POST /admin/claims/{id}/approve\|reject` |
 | F-NOTI-01~03 인앱 알림 | `GET /notifications`, `/unread-count`, `POST /notifications/read` — 팔로우·댓글·좋아요·Claim 심사·티어 상승·QR 정복 시 생성 (`services/notification_service.py`) |
 | F-ADMIN-07 계정 정지 | `POST /admin/users/{id}/suspend\|reactivate` |
@@ -120,8 +121,8 @@ ruff check .
 - **1단계 (매장/지도/기본 인증)** — ✅ 동작
 - **2단계 (골드/실버, 티어)** — ✅ 동작
 - **3단계 (랭킹, 게시판)** — ✅ 동작 (전국/친구 랭킹, 게시글·댓글·좋아요·신고)
-- **4단계 (관리자)** — ✅ 검토 큐·대시보드·계정 제재·경험치 조정·신고/콘텐츠 처리·Claim 심사
-  · 매장 병합(F-ADMIN-04)·엑셀 대량 업로드(F-ADMIN-05)는 스텁
+- **4단계 (관리자)** — ✅ 검토 큐·대시보드·계정 제재·경험치 조정·신고/콘텐츠 처리·Claim 심사·매장 병합
+  · 엑셀/CSV 대량 업로드(F-ADMIN-05)는 스텁
 - **5단계 (매장 Claim/QR)** — ✅ 소유권 신청→관리자 승인→소유자 연결, 정복용 QR 토큰 발급/검증
   (`/stores/{id}/claim`, `/stores/{id}/manage`, `/qr?t=`) · 제휴/포인트는 스텁
 - **6단계 (인앱 알림)** — ✅ 팔로우·댓글·좋아요·Claim 심사·티어 상승·QR 정복 알림,
