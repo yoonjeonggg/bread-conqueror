@@ -71,6 +71,32 @@ class StoreMergeResult(BaseModel):
     owner_inherited: bool
 
 
+class BulkUploadRequest(BaseModel):
+    csv_text: str = Field(min_length=1, max_length=1_000_000)
+    dry_run: bool = False
+
+
+class BulkUploadRowResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    line: int
+    name: str
+    status: str
+    detail: str | None = None
+    store_id: int | None = None
+
+
+class BulkUploadResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    dry_run: bool
+    total: int
+    created: int
+    skipped_duplicate: int
+    failed: int
+    rows: list[BulkUploadRowResult]
+
+
 class DashboardOut(BaseModel):
     total_users: int
     total_stores: int

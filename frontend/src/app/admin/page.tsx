@@ -10,6 +10,7 @@ import type { AdminClaim } from "@/lib/types";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
+type CsvResult = Awaited<ReturnType<typeof api.bulkUploadStores>>;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -22,6 +23,24 @@ export default function AdminPage() {
   const [mergeSource, setMergeSource] = useState("");
   const [mergeMsg, setMergeMsg] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [csvName, setCsvName] = useState<string | null>(null);
+  const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
+  const [csvBusy, setCsvBusy] = useState(false);
+  const [csvErr, setCsvErr] = useState<string | null>(null);
+
+  const runCsv = async (dryRun: boolean) => {
+    setCsvErr(null);
+    setCsvResult(null);
+    setCsvBusy(true);
+    try {
+      setCsvResult(await api.bulkUploadStores(csvText, dryRun));
+    } catch (e) {
+      setCsvErr(e instanceof Error ? e.message : "업로드에 실패했습니다.");
+    } finally {
+      setCsvBusy(false);
+    }
+  };
 
   const loadReports = () =>
     api.adminReports().then(setReports).catch(() => setReports([]));
@@ -175,6 +194,87 @@ export default function AdminPage() {
         ))
       )}
 
+      <div className="section-title">매장 CSV 대량 등록 (F-ADMIN-05)</div>
+      <div className="card">
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          헤더: <code>name,address,region_sido,lat,lng,category</code> (name·address·lat·lng
+          필수). 반경 30m 내 기존/직전 행과 겹치면 자동 스킵됩니다.
+        </p>
+        <label
+          className="btn btn-ghost"
+          style={{ cursor: "pointer", marginBottom: 8 }}
+        >
+          {csvName ? `📄 ${csvName}` : "📄 CSV 파일 선택"}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setCsvName(f.name);
+              setCsvResult(null);
+              setCsvErr(null);
+              f.text().then(setCsvText);
+            }}
+          />
+        </label>
+        {csvErr && <p className="error-text">{csvErr}</p>}
+        <div className="row" style={{ gap: 8 }}>
+          <button
+            className="btn btn-ghost"
+            style={{ width: "auto", padding: "8px 12px" }}
+            disabled={csvBusy || !csvText}
+            onClick={() => runCsv(true)}
+          >
+            미리보기
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ width: "auto", padding: "8px 12px" }}
+            disabled={csvBusy || !csvText}
+            onClick={() => runCsv(false)}
+          >
+            {csvBusy ? "처리 중…" : "등록 실행"}
+          </button>
+        </div>
+
+        {csvResult && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ fontSize: 13, fontWeight: 700 }}>
+              {csvResult.dry_run ? "미리보기" : "등록 완료"} · 총 {csvResult.total} —
+              생성 {csvResult.created} / 스킵 {csvResult.skipped_duplicate} / 실패{" "}
+              {csvResult.failed}
+            </p>
+            <div style={{ maxHeight: 220, overflowY: "auto", fontSize: 12 }}>
+              {csvResult.rows.map((r) => (
+                <div
+                  key={r.line}
+                  className="row"
+                  style={{ justifyContent: "space-between", padding: "3px 0" }}
+                >
+                  <span>
+                    {r.line}행 {r.name}
+                  </span>
+                  <span
+                    className={`badge ${
+                      r.status === "created"
+                        ? "badge-verified"
+                        : r.status === "skipped"
+                          ? "badge-silver"
+                          : "badge-gold"
+                    }`}
+                  >
+                    {r.status}
+                    {r.detail ? ` · ${r.detail}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="section-title">중복 매장 병합 (F-ADMIN-04)</div>
       <div className="card">
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
@@ -247,7 +347,7 @@ export default function AdminPage() {
         <br />· 경험치 조정 <code>POST /admin/users/&#123;id&#125;/adjust-exp</code>
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
         <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
-        <br />· 엑셀/CSV 대량 업로드 — 다음 스프린트
+        <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
       </div>
     </div>
   );

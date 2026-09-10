@@ -225,6 +225,26 @@ export const api = {
       { method: "POST", body: { note: note ?? null }, auth: true },
     ),
 
+  bulkUploadStores: (csvText: string, dryRun: boolean) =>
+    request<{
+      dry_run: boolean;
+      total: number;
+      created: number;
+      skipped_duplicate: number;
+      failed: number;
+      rows: {
+        line: number;
+        name: string;
+        status: "created" | "skipped" | "failed";
+        detail: string | null;
+        store_id: number | null;
+      }[];
+    }>("/admin/stores/bulk-upload", {
+      method: "POST",
+      body: { csv_text: csvText, dry_run: dryRun },
+      auth: true,
+    }),
+
   mergeStores: (targetId: number, sourceId: number, note?: string) =>
     request<{
       target_id: number;
