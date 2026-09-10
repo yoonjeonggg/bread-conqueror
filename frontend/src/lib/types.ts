@@ -84,6 +84,31 @@ export interface RankingResponse {
   my_rank: number | null;
 }
 
+export interface Review {
+  id: number;
+  store_id: number;
+  user_id: number;
+  rating: number;
+  content: string | null;
+  created_at: string;
+  author_nickname?: string;
+  author_tier_level?: number;
+}
+
+export interface FollowCounts {
+  followers: number;
+  following: number;
+  is_following: boolean;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+}
+
 export interface Post {
   id: number;
   title: string;

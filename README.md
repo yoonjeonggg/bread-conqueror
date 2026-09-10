@@ -23,7 +23,7 @@ bread-conqueror/
 | DB | MySQL 8 (utf8mb4) | 로컬은 Docker, 테스트는 SQLite |
 | 캐시/랭킹 | Redis Sorted Set | 전국/지역 랭킹, 쿨다운 (best-effort, DB가 SoT) |
 | 인증 | JWT (access/refresh), passlib bcrypt | RBAC 의존성으로 관리자 API 보호 |
-| 프론트 | Next.js App Router | 홈·지도·매장상세·정복·랭킹·프로필·관리자 |
+| 프론트 | Next.js App Router | 홈·지도·매장상세(리뷰)·매장등록·정복·게시판·랭킹·프로필·팔로우·관리자 |
 
 ---
 
@@ -94,20 +94,30 @@ ruff check .
 | 요구사항 | 위치 |
 | --- | --- |
 | F-MAP-01 주변 베이커리 탐색 | `GET /stores?lat&lng&radius_m` — bounding box 1차 필터 + haversine |
-| F-MAP-04 / F-STORE-02 신규 매장 등록 | `POST /stores` — 반경 30m 중복 검사 |
+| F-MAP-04 / F-STORE-02 신규 매장 등록 | `POST /stores` — 반경 30m 중복 검사, 프론트 `/stores/new` |
+| F-DETAIL-01/02 리뷰·평점 | `GET/POST /stores/{id}/reviews` — upsert 시 StoreStat·UserStat 재집계 |
 | F-CONQ-01~09 정복/이상탐지 | `POST /flags`, `services/flag_service.py`, `geo_service.py` |
+| F-CONQ-05 실버 증빙 신뢰도 | `POST /flags/exif-preview` — `utils/exif.py`, EXIF 촬영시각/GPS → trust |
+| F-CONQ-10 신고 | `POST /reports` → 관리자 큐 |
 | F-TIER-01~03 티어 산정 | `services/tier_service.py` — exp + 골드비율 게이트 |
-| F-RANK-01~03 랭킹 | `GET /rankings/*`, `services/ranking_service.py` (Redis ZSET, DB fallback) |
-| F-PROF-01 프로필 | `GET /users/me`, `GET /users/{id}` |
-| F-BOARD-01~02 추천 게시판 | `GET/POST /posts` — 작성 시점 티어·깃발 수 스냅샷 |
-| F-ADMIN-01/02/10/11 | `GET /admin/flags/review-queue`, `/admin/stats/dashboard` — RBAC |
+| F-RANK-01~03 랭킹 | `GET /rankings/{national,regional,friends}` (Redis ZSET, DB fallback) |
+| F-PROF-01 프로필 | `GET /users/me`, `GET /users/{id}`, 팔로우 카운트 |
+| F-BOARD-01~03 추천 게시판 | `GET/POST /posts`, 댓글·좋아요, 신고→관리자 모더레이션 |
+| F-ADMIN-01/02 | `GET /admin/flags/review-queue`, `POST .../approve\|invalidate` |
+| F-ADMIN-07 계정 정지 | `POST /admin/users/{id}/suspend\|reactivate` |
+| F-ADMIN-08 경험치·티어 조정 | `POST /admin/users/{id}/adjust-exp` — 티어 자동 재계산 |
+| F-ADMIN-09 콘텐츠 모더레이션 | `POST /admin/{posts,comments}/{id}/moderate`, `/admin/reports/{id}/resolve` |
+| F-ADMIN-10/11 | `GET /admin/stats/dashboard` — RBAC 의존성으로 전 라우트 보호 |
+
+모든 관리자 행위는 `admin_action_logs` 에 기록됩니다.
 
 ### 로드맵 단계별 상태
 
 - **1단계 (매장/지도/기본 인증)** — ✅ 동작
 - **2단계 (골드/실버, 티어)** — ✅ 동작
-- **3단계 (랭킹, 게시판)** — ✅ 기본 동작 (친구 랭킹·댓글 UI는 API만)
-- **4단계 (관리자)** — ⚙️ 검토 큐·대시보드 구현, 매장 병합/대량 업로드/계정 제재는 스텁
+- **3단계 (랭킹, 게시판)** — ✅ 동작 (전국/친구 랭킹, 게시글·댓글·좋아요·신고)
+- **4단계 (관리자)** — ✅ 검토 큐·대시보드·계정 제재·경험치 조정·신고/콘텐츠 처리
+  · 매장 병합(F-ADMIN-04)·엑셀 대량 업로드(F-ADMIN-05)는 스텁
 - **5단계 (매장 Claim/QR/제휴)** — 🗂️ 모델(`store_claims`)만, 라우터 미구현
 
 ---

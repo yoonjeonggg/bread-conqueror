@@ -21,9 +21,36 @@ export default function ConquerPage() {
   const [store, setStore] = useState<Store | null>(null);
   const [mode, setMode] = useState<Mode>("GOLD");
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [exif, setExif] = useState<{
+    trust: "HIGH" | "MEDIUM" | "LOW";
+    captured_at: string | null;
+    has_gps: boolean;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ConquestResponse | null>(null);
+
+  async function onPhoto(file: File | undefined) {
+    setExif(null);
+    setPhotoName(file?.name ?? null);
+    if (!file) return;
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(file);
+    });
+    try {
+      const info = await api.exifPreview(b64);
+      setExif({
+        trust: info.trust,
+        captured_at: info.captured_at,
+        has_gps: info.has_gps,
+      });
+    } catch {
+      /* EXIF preview is best-effort */
+    }
+  }
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -49,6 +76,7 @@ export default function ConquerPage() {
               ? "PHOTO"
               : "NONE",
         evidence_image_url: photoName ? `local://${photoName}` : null,
+        visited_at: mode === "SILVER" ? exif?.captured_at ?? null : null,
       });
       setResult(res);
       await refresh();
@@ -173,9 +201,28 @@ export default function ConquerPage() {
             type="file"
             accept="image/*"
             hidden
-            onChange={(e) => setPhotoName(e.target.files?.[0]?.name ?? null)}
+            onChange={(e) => onPhoto(e.target.files?.[0])}
           />
         </label>
+
+        {exif && (
+          <div
+            className={`badge ${
+              exif.trust === "HIGH"
+                ? "badge-verified"
+                : exif.trust === "MEDIUM"
+                  ? "badge-gold"
+                  : "badge-silver"
+            }`}
+            style={{ marginTop: 10 }}
+          >
+            EXIF 신뢰도 {exif.trust}
+            {exif.captured_at
+              ? ` · 촬영 ${new Date(exif.captured_at).toLocaleDateString("ko-KR")}`
+              : ""}
+            {exif.has_gps ? " · GPS 포함" : ""}
+          </div>
+        )}
       </div>
 
       {error && <p className="error-text">{error}</p>}
