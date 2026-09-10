@@ -1,5 +1,6 @@
 import type {
   AdminClaim,
+  AppNotification,
   Comment,
   ConquestResponse,
   Flag,
@@ -200,6 +201,23 @@ export const api = {
     }),
 
   adminClaims: () => request<AdminClaim[]>("/admin/claims", { auth: true }),
+
+  // 알림 (로드맵 6단계)
+  notifications: (onlyUnread = false) =>
+    request<AppNotification[]>(
+      `/notifications?only_unread=${onlyUnread}&limit=50`,
+      { auth: true },
+    ),
+
+  unreadCount: () =>
+    request<{ count: number }>("/notifications/unread-count", { auth: true }),
+
+  markNotificationsRead: (ids?: number[]) =>
+    request<void>("/notifications/read", {
+      method: "POST",
+      body: { ids: ids ?? null },
+      auth: true,
+    }),
 
   reviewClaim: (claimId: number, approve: boolean, note?: string) =>
     request<StoreClaim>(

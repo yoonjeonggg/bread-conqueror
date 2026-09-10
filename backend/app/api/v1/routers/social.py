@@ -5,11 +5,12 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import CurrentUser, DbSession, OptionalUser
-from app.models.enums import ReportTargetType
+from app.models.enums import NotificationType, ReportTargetType
 from app.models.post import Post
 from app.models.social import Follow, Report
 from app.models.user import User, UserStat
 from app.schemas.social import FollowCounts, FollowUser, ReportCreate, ReportOut
+from app.services import notification_service
 
 router = APIRouter(tags=["social"])
 
@@ -24,10 +25,19 @@ async def follow(user_id: int, db: DbSession, me: CurrentUser) -> None:
     if await db.get(User, user_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     db.add(Follow(follower_id=me.id, followee_id=user_id))
+    await notification_service.create(
+        db,
+        recipient_id=user_id,
+        actor_id=me.id,
+        type=NotificationType.FOLLOW,
+        message=f"{me.nickname}님이 회원님을 팔로우했습니다.",
+        target_type="USER",
+        target_id=me.id,
+    )
     try:
         await db.commit()
     except IntegrityError:
-        await db.rollback()  # already following — idempotent
+        await db.rollback()  # already following — idempotent (알림도 함께 롤백)
 
 
 @router.delete("/users/{user_id}/follow", status_code=status.HTTP_204_NO_CONTENT)

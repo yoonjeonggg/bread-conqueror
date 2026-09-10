@@ -275,6 +275,37 @@ button {
   font-size: 19px;
 }
 
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notif-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.notif-item.unread {
+  border-left: 3px solid var(--orange);
+}
+
+.notif-dot {
+  font-size: 20px;
+  line-height: 1;
+}
+
 .list-empty {
   text-align: center;
   padding: 40px 16px;

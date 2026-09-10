@@ -20,6 +20,7 @@ from app.models.enums import (
     ClaimStatus,
     FlagStatus,
     FlagType,
+    NotificationType,
     ReportStatus,
     UserStatus,
 )
@@ -42,7 +43,7 @@ from app.schemas.admin import (
 )
 from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
-from app.services import tier_service
+from app.services import notification_service, tier_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -95,6 +96,14 @@ async def invalidate_flag(flag_id: int, db: DbSession, admin: CurrentAdmin) -> F
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     flag.status = FlagStatus.INVALIDATED
     _log(db, admin.id, "FLAG_INVALIDATE", "FLAG", flag_id)
+    await notification_service.create(
+        db,
+        recipient_id=flag.user_id,
+        type=NotificationType.FLAG_INVALIDATED,
+        message="검토 대기 중이던 깃발이 무효 처리되었습니다.",
+        target_type="FLAG",
+        target_id=flag_id,
+    )
     await db.commit()
     await db.refresh(flag)
     return flag
@@ -108,6 +117,14 @@ async def approve_flag(flag_id: int, db: DbSession, admin: CurrentAdmin) -> Flag
     flag.status = FlagStatus.VALID
     flag.is_flagged = False
     _log(db, admin.id, "FLAG_APPROVE", "FLAG", flag_id)
+    await notification_service.create(
+        db,
+        recipient_id=flag.user_id,
+        type=NotificationType.FLAG_APPROVED,
+        message="검토 대기 중이던 깃발이 정상 인증으로 확정되었습니다.",
+        target_type="FLAG",
+        target_id=flag_id,
+    )
     await db.commit()
     await db.refresh(flag)
     return flag
@@ -170,6 +187,15 @@ async def adjust_exp(
         user_id,
         f"delta={payload.exp_delta}; {payload.reason}",
     )
+    if tier_changed:
+        await notification_service.create(
+            db,
+            recipient_id=user_id,
+            type=NotificationType.TIER_UP,
+            message=f"티어가 Lv.{stat.tier_level}(으)로 조정되었습니다.",
+            target_type="USER",
+            target_id=user_id,
+        )
     await db.commit()
     return AdjustResultOut(
         user_id=user_id,
@@ -309,13 +335,44 @@ async def _decide_claim(
             .scalars()
             .all()
         )
+        store_name = store.name
         for other in others:
             other.status = ClaimStatus.REJECTED
             other.reviewed_by = admin.id
             other.reviewed_at = now
             other.review_note = "다른 신청이 승인되었습니다."
+            await notification_service.create(
+                db,
+                recipient_id=other.user_id,
+                actor_id=admin.id,
+                type=NotificationType.CLAIM_REJECTED,
+                message=f"'{store_name}' 소유권 신청이 반려되었습니다 (다른 신청 승인).",
+                target_type="STORE",
+                target_id=other.store_id,
+            )
     else:
         claim.status = ClaimStatus.REJECTED
+        store = await db.get(Store, claim.store_id)
+        store_name = store.name if store is not None else "매장"
+
+    await notification_service.create(
+        db,
+        recipient_id=claim.user_id,
+        actor_id=admin.id,
+        type=(
+            NotificationType.CLAIM_APPROVED
+            if approve
+            else NotificationType.CLAIM_REJECTED
+        ),
+        message=(
+            f"'{store_name}' 소유권이 승인되었습니다. 이제 QR을 발급할 수 있어요."
+            if approve
+            else f"'{store_name}' 소유권 신청이 반려되었습니다."
+            + (f" ({note})" if note else "")
+        ),
+        target_type="STORE",
+        target_id=claim.store_id,
+    )
 
     _log(
         db,
