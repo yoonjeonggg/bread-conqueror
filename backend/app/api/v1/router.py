@@ -5,6 +5,7 @@ from app.api.v1.routers import (
     auth,
     claims,
     flags,
+    missions,
     notifications,
     posts,
     ranking,
@@ -24,5 +25,6 @@ api_router.include_router(ranking.router)
 api_router.include_router(posts.router)
 api_router.include_router(social.router)
 api_router.include_router(claims.router)
+api_router.include_router(missions.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admin.router)

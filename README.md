@@ -23,7 +23,7 @@ bread-conqueror/
 | DB | MySQL 8 (utf8mb4) | 로컬은 Docker, 테스트는 SQLite |
 | 캐시/랭킹 | Redis Sorted Set | 전국/지역 랭킹, 쿨다운 (best-effort, DB가 SoT) |
 | 인증 | JWT (access/refresh), passlib bcrypt | RBAC 의존성으로 관리자 API 보호 |
-| 프론트 | Next.js App Router | 홈·지도·검색·매장상세(리뷰)·매장등록·정복·QR정복·소유권신청/관리·게시판·랭킹·알림·프로필·관리자 |
+| 프론트 | Next.js App Router | 홈·지도·검색·매장상세(리뷰)·매장등록·정복·QR정복·소유권신청/관리·게시판·랭킹·알림·미션·프로필·관리자 |
 
 ---
 
@@ -95,6 +95,7 @@ ruff check .
 | --- | --- |
 | F-MAP-01 주변 베이커리 탐색 | `GET /stores?lat&lng&radius_m` — bounding box 1차 필터 + haversine |
 | F-SEARCH 검색/필터 | `GET /stores/search` (키워드·지역·종류·인증·정렬), `GET /stores/filters`, `GET /posts?q&store_id&sort` |
+| F-MISSION 주간 미션 | `GET /missions/weekly` (이번 주 진행도), `POST /missions/{code}/claim` (보상 1회) — `services/mission_service.py` |
 | F-MAP-04 / F-STORE-02 신규 매장 등록 | `POST /stores` — 반경 30m 중복 검사, 프론트 `/stores/new` |
 | F-DETAIL-01/02 리뷰·평점 | `GET/POST /stores/{id}/reviews` — upsert 시 StoreStat·UserStat 재집계 |
 | F-CONQ-01~09 정복/이상탐지 | `POST /flags`, `services/flag_service.py`, `geo_service.py` |
@@ -129,6 +130,7 @@ ruff check .
 - **6단계 (인앱 알림)** — ✅ 팔로우·댓글·좋아요·Claim 심사·티어 상승·QR 정복 알림,
   읽음 처리, 하단 네비 배지 (`/notifications`)
 - **7단계 (검색/필터)** — ✅ 매장 키워드·지역·종류·인증·정렬 검색(`/search`), 게시판 검색·인기순
+- **8단계 (주간 미션)** — ✅ 이번 주 골드/깃발/리뷰/탐험/원정 미션, 진행도 계산·보상 수령 (`/missions`)
 
 ---
 

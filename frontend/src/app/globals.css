@@ -201,6 +201,20 @@ button {
   border-color: var(--bread-brown);
 }
 
+.mission-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.mission-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--orange));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
 .search-select {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);

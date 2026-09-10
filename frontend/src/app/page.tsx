@@ -15,6 +15,11 @@ export default function HomePage() {
   const { coords } = useGeolocation();
   const [popular, setPopular] = useState<Store[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [missionInfo, setMissionInfo] = useState<{
+    claimable: number;
+    done: number;
+    total: number;
+  } | null>(null);
 
   useEffect(() => {
     const c = coords ?? DEFAULT_COORDS;
@@ -30,6 +35,23 @@ export default function HomePage() {
       .catch(() => setPopular([]));
     api.posts().then(setPosts).catch(() => setPosts([]));
   }, [coords]);
+
+  useEffect(() => {
+    if (!user) {
+      setMissionInfo(null);
+      return;
+    }
+    api
+      .weeklyMissions()
+      .then((r) =>
+        setMissionInfo({
+          claimable: r.missions.filter((m) => m.completed && !m.claimed).length,
+          done: r.missions.filter((m) => m.completed).length,
+          total: r.missions.length,
+        }),
+      )
+      .catch(() => setMissionInfo(null));
+  }, [user]);
 
   return (
     <div className="page">
@@ -87,6 +109,23 @@ export default function HomePage() {
             <button className="btn btn-primary">시작하기</button>
           </Link>
         </div>
+      )}
+
+      {missionInfo && (
+        <Link href="/missions" className="card" style={{ display: "block", marginTop: 14 }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <strong style={{ fontSize: 15 }}>🎯 이번 주 미션</strong>
+            {missionInfo.claimable > 0 ? (
+              <span className="badge badge-gold">
+                보상 {missionInfo.claimable}개 대기
+              </span>
+            ) : (
+              <span className="badge badge-silver">
+                {missionInfo.done}/{missionInfo.total} 완료
+              </span>
+            )}
+          </div>
+        </Link>
       )}
 
       <div className="section-title">🔥 이번 주 인기 정복지</div>
