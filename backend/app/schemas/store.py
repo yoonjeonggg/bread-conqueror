@@ -47,3 +47,13 @@ class StoreListItem(StoreOut):
 class NearbyDuplicateWarning(BaseModel):
     message: str
     stores: list[StoreOut]
+
+
+class StoreSearchResult(BaseModel):
+    total: int
+    items: list[StoreListItem]
+
+
+class StoreFilters(BaseModel):
+    regions: list[str]
+    categories: list[str]

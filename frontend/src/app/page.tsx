@@ -35,11 +35,16 @@ export default function HomePage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title">🥐 Bread Conqueror</div>
-        {!loading && !user && (
-          <Link href="/login" className="link-accent">
-            로그인
+        <div className="row" style={{ gap: 12 }}>
+          <Link href="/search" className="link-accent">
+            🔍 검색
           </Link>
-        )}
+          {!loading && !user && (
+            <Link href="/login" className="link-accent">
+              로그인
+            </Link>
+          )}
+        </div>
       </div>
 
       {user ? (

@@ -1,9 +1,9 @@
 """추천 게시판 (F-BOARD). Phase 3 — basic CRUD implemented, moderation lives in admin."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import CurrentUser, DbSession
@@ -24,22 +24,21 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 @router.get("", response_model=list[PostOut])
 async def list_posts(
     db: DbSession,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    store_id: Annotated[int | None, Query(gt=0)] = None,
+    sort: Literal["recent", "popular"] = "recent",
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[Post]:
-    return list(
-        (
-            await db.execute(
-                select(Post)
-                .where(Post.status == ContentStatus.PUBLISHED)
-                .order_by(Post.created_at.desc())
-                .limit(limit)
-                .offset(offset)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    stmt = select(Post).where(Post.status == ContentStatus.PUBLISHED)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(or_(Post.title.ilike(like), Post.content.ilike(like)))
+    if store_id is not None:
+        stmt = stmt.where(Post.store_id == store_id)
+    order = Post.like_count.desc() if sort == "popular" else Post.created_at.desc()
+    stmt = stmt.order_by(order, Post.id.desc()).limit(limit).offset(offset)
+    return list((await db.execute(stmt)).scalars().all())
 
 
 @router.post("", response_model=PostOut, status_code=status.HTTP_201_CREATED)
