@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import CurrentUser, DbSession
-from app.models.enums import ContentStatus
+from app.models.enums import ContentStatus, NotificationType
 from app.models.post import Comment, Post, PostLike
 from app.models.user import UserStat
 from app.schemas.post import (
@@ -16,6 +16,7 @@ from app.schemas.post import (
     PostCreate,
     PostOut,
 )
+from app.services import notification_service
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -95,6 +96,15 @@ async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     db.add(PostLike(post_id=post_id, user_id=user.id))
     post.like_count += 1
+    await notification_service.create(
+        db,
+        recipient_id=post.user_id,
+        actor_id=user.id,
+        type=NotificationType.POST_LIKE,
+        message=f"{user.nickname}님이 '{post.title}' 글을 좋아합니다.",
+        target_type="POST",
+        target_id=post_id,
+    )
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -112,10 +122,20 @@ async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
 async def add_comment(
     post_id: int, payload: CommentCreate, db: DbSession, user: CurrentUser
 ) -> Comment:
-    if await db.get(Post, post_id) is None:
+    post = await db.get(Post, post_id)
+    if post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     comment = Comment(post_id=post_id, user_id=user.id, content=payload.content)
     db.add(comment)
+    await notification_service.create(
+        db,
+        recipient_id=post.user_id,
+        actor_id=user.id,
+        type=NotificationType.POST_COMMENT,
+        message=f"{user.nickname}님이 '{post.title}' 글에 댓글을 남겼습니다.",
+        target_type="POST",
+        target_id=post_id,
+    )
     await db.commit()
     await db.refresh(comment)
     return comment

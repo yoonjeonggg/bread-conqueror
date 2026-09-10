@@ -154,6 +154,29 @@ export interface AdminClaim extends StoreClaim {
   contact_phone: string;
 }
 
+export type NotificationType =
+  | "FOLLOW"
+  | "POST_COMMENT"
+  | "POST_LIKE"
+  | "CLAIM_APPROVED"
+  | "CLAIM_REJECTED"
+  | "TIER_UP"
+  | "FLAG_APPROVED"
+  | "FLAG_INVALIDATED"
+  | "QR_CONQUEST";
+
+export interface AppNotification {
+  id: number;
+  type: NotificationType;
+  actor_id: number | null;
+  actor_nickname: string | null;
+  target_type: string | null;
+  target_id: number | null;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export const TIER_NAMES: Record<number, string> = {
   1: "빵 입문자",
   2: "빵 탐험가",

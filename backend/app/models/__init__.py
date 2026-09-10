@@ -4,6 +4,7 @@ from app.models.enums import (
     EvidenceType,
     FlagStatus,
     FlagType,
+    NotificationType,
     ReportStatus,
     ReportTargetType,
     StoreCreatedSource,
@@ -12,6 +13,7 @@ from app.models.enums import (
     UserStatus,
 )
 from app.models.flag import Flag
+from app.models.notification import Notification
 from app.models.policy import (
     AdminActionLog,
     PolicyConfig,
@@ -36,6 +38,8 @@ __all__ = [
     "FlagStatus",
     "FlagType",
     "Follow",
+    "Notification",
+    "NotificationType",
     "PolicyConfig",
     "Post",
     "PostLike",

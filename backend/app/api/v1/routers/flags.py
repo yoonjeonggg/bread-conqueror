@@ -9,15 +9,19 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.core.redis import redis_client
-from app.models.enums import EvidenceType, FlagType, StoreStatus
+from app.models.enums import EvidenceType, FlagType, NotificationType, StoreStatus
 from app.models.flag import Flag
 from app.models.store import Store
 from app.models.store_qr_token import StoreQrToken
 from app.models.user import UserStat
 from app.schemas.claim import QrConquerRequest
 from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
-from app.services import flag_service, ranking_service
+from app.services import flag_service, notification_service, ranking_service
 from app.utils.exif import extract
+
+
+def _tier_up_message(level: int) -> str:
+    return f"축하합니다! 티어가 Lv.{level}(으)로 상승했습니다."
 
 router = APIRouter(prefix="/flags", tags=["flags"])
 
@@ -49,6 +53,15 @@ async def create_flag(
         evidence_image_url=payload.evidence_image_url,
         visited_at=payload.visited_at,
     )
+    if result.tier_changed:
+        await notification_service.create(
+            db,
+            recipient_id=user.id,
+            type=NotificationType.TIER_UP,
+            message=_tier_up_message(result.new_tier_level),
+            target_type="USER",
+            target_id=user.id,
+        )
     await db.commit()
     await db.refresh(result.flag)
 
@@ -114,6 +127,27 @@ async def conquer_by_qr(
         via_qr=True,
     )
     token.use_count += 1
+
+    if result.tier_changed:
+        await notification_service.create(
+            db,
+            recipient_id=user.id,
+            type=NotificationType.TIER_UP,
+            message=_tier_up_message(result.new_tier_level),
+            target_type="USER",
+            target_id=user.id,
+        )
+    if store.owner_id is not None:
+        await notification_service.create(
+            db,
+            recipient_id=store.owner_id,
+            actor_id=user.id,
+            type=NotificationType.QR_CONQUEST,
+            message=f"{user.nickname}님이 QR로 '{store.name}'을(를) 정복했습니다.",
+            target_type="STORE",
+            target_id=store.id,
+        )
+
     await db.commit()
     await db.refresh(result.flag)
 
