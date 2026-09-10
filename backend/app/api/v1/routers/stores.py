@@ -1,8 +1,8 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import contains_eager, selectinload
 
 from app.core.dependencies import CurrentUser, DbSession, OptionalUser
 from app.models.enums import StoreCreatedSource, StoreStatus
@@ -10,8 +10,10 @@ from app.models.flag import Flag
 from app.models.store import Store, StoreStat
 from app.schemas.store import (
     StoreCreate,
+    StoreFilters,
     StoreListItem,
     StoreOut,
+    StoreSearchResult,
 )
 from app.services.geo_service import bounding_box, haversine_m
 
@@ -72,6 +74,99 @@ async def list_nearby(
 
     items.sort(key=lambda s: s.distance_m or 0)
     return items[:limit]
+
+
+@router.get("/search", response_model=StoreSearchResult)
+async def search_stores(
+    db: DbSession,
+    user: OptionalUser,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    region_sido: Annotated[str | None, Query(max_length=50)] = None,
+    category: Annotated[str | None, Query(max_length=50)] = None,
+    verified_only: bool = False,
+    sort: Literal["popular", "rating", "recent"] = "popular",
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> StoreSearchResult:
+    """F-SEARCH — 위치와 무관한 키워드/필터 검색."""
+    conds = [Store.status == StoreStatus.ACTIVE]
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        conds.append(or_(Store.name.ilike(like), Store.address.ilike(like)))
+    if region_sido:
+        conds.append(Store.region_sido == region_sido)
+    if category:
+        conds.append(Store.category == category)
+    if verified_only:
+        conds.append(Store.is_verified_owner.is_(True))
+
+    total = (
+        await db.execute(
+            select(func.count()).select_from(Store).where(*conds)
+        )
+    ).scalar_one()
+
+    stmt = (
+        select(Store)
+        .outerjoin(StoreStat, StoreStat.store_id == Store.id)
+        .options(contains_eager(Store.stat))
+        .where(*conds)
+    )
+    if sort == "popular":
+        stmt = stmt.order_by(StoreStat.conqueror_count.desc(), Store.id.desc())
+    elif sort == "rating":
+        stmt = stmt.order_by(StoreStat.average_rating.desc(), Store.id.desc())
+    else:
+        stmt = stmt.order_by(Store.id.desc())
+    stmt = stmt.limit(limit).offset(offset)
+
+    rows = (await db.execute(stmt)).scalars().all()
+
+    mine: set[int] = set()
+    if user is not None and rows:
+        mine = set(
+            (
+                await db.execute(
+                    select(Flag.store_id.distinct()).where(
+                        Flag.user_id == user.id,
+                        Flag.store_id.in_([s.id for s in rows]),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    items: list[StoreListItem] = []
+    for store in rows:
+        item = StoreListItem.model_validate(store)
+        item.conquered_by_me = store.id in mine
+        items.append(item)
+    return StoreSearchResult(total=total, items=items)
+
+
+@router.get("/filters", response_model=StoreFilters)
+async def store_filters(db: DbSession) -> StoreFilters:
+    """검색 드롭다운용 지역/카테고리 목록."""
+
+    async def distinct(column) -> list[str]:
+        return list(
+            (
+                await db.execute(
+                    select(column)
+                    .distinct()
+                    .where(column.isnot(None), Store.status == StoreStatus.ACTIVE)
+                    .order_by(column)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    return StoreFilters(
+        regions=await distinct(Store.region_sido),
+        categories=await distinct(Store.category),
+    )
 
 
 @router.get("/{store_id}", response_model=StoreOut)

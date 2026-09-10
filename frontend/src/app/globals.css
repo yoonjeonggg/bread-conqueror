@@ -201,6 +201,15 @@ button {
   border-color: var(--bread-brown);
 }
 
+.search-select {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--cream-white);
+  color: var(--ink);
+}
+
 .error-text {
   color: var(--danger);
   font-size: 13px;

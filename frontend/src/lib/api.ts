@@ -269,8 +269,42 @@ export const api = {
   friendsRanking: () =>
     request<RankingResponse>("/rankings/friends", { auth: true }),
 
+  // 매장 검색 / 필터 (F-SEARCH)
+  searchStores: (params: {
+    q?: string;
+    region_sido?: string;
+    category?: string;
+    verified_only?: boolean;
+    sort?: "popular" | "rating" | "recent";
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== "" && v !== false) qs.set(k, String(v));
+    });
+    return request<{ total: number; items: Store[] }>(
+      `/stores/search?${qs.toString()}`,
+      { auth: true },
+    );
+  },
+
+  storeFilters: () =>
+    request<{ regions: string[]; categories: string[] }>("/stores/filters"),
+
   // board
-  posts: () => request<Post[]>("/posts"),
+  posts: (params?: {
+    q?: string;
+    storeId?: number;
+    sort?: "recent" | "popular";
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set("q", params.q);
+    if (params?.storeId) qs.set("store_id", String(params.storeId));
+    if (params?.sort) qs.set("sort", params.sort);
+    const suffix = qs.toString();
+    return request<Post[]>(`/posts${suffix ? `?${suffix}` : ""}`);
+  },
 
   post: (id: number) => request<Post>(`/posts/${id}`),
 

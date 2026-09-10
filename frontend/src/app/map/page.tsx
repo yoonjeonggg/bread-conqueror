@@ -32,13 +32,18 @@ export default function MapPage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title">🗺️ 지도</div>
-        <button
-          className="link-accent"
-          onClick={locate}
-          style={{ background: "none", border: "none", cursor: "pointer" }}
-        >
-          내 위치 새로고침
-        </button>
+        <div className="row" style={{ gap: 12 }}>
+          <Link href="/search" className="link-accent">
+            🔍 검색
+          </Link>
+          <button
+            className="link-accent"
+            onClick={locate}
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
+            내 위치
+          </button>
+        </div>
       </div>
 
       {/* Kakao Maps SDK drops in here — set NEXT_PUBLIC_KAKAO_MAP_KEY and
