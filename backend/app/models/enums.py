@@ -33,6 +33,7 @@ class EvidenceType(str, enum.Enum):
     PHOTO = "PHOTO"
     RECEIPT = "RECEIPT"
     REALTIME_GPS = "REALTIME_GPS"
+    QR = "QR"
 
 
 class FlagStatus(str, enum.Enum):

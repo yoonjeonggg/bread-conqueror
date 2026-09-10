@@ -43,6 +43,9 @@ class Store(Base, TimestampMixin):
     is_verified_owner: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    owner_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=True
+    )
     status: Mapped[StoreStatus] = mapped_column(
         Enum(StoreStatus), nullable=False, default=StoreStatus.ACTIVE
     )

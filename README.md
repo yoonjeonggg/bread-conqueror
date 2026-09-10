@@ -23,7 +23,7 @@ bread-conqueror/
 | DB | MySQL 8 (utf8mb4) | 로컬은 Docker, 테스트는 SQLite |
 | 캐시/랭킹 | Redis Sorted Set | 전국/지역 랭킹, 쿨다운 (best-effort, DB가 SoT) |
 | 인증 | JWT (access/refresh), passlib bcrypt | RBAC 의존성으로 관리자 API 보호 |
-| 프론트 | Next.js App Router | 홈·지도·매장상세(리뷰)·매장등록·정복·게시판·랭킹·프로필·팔로우·관리자 |
+| 프론트 | Next.js App Router | 홈·지도·매장상세(리뷰)·매장등록·정복·QR정복·소유권신청/관리·게시판·랭킹·프로필·관리자 |
 
 ---
 
@@ -103,7 +103,10 @@ ruff check .
 | F-RANK-01~03 랭킹 | `GET /rankings/{national,regional,friends}` (Redis ZSET, DB fallback) |
 | F-PROF-01 프로필 | `GET /users/me`, `GET /users/{id}`, 팔로우 카운트 |
 | F-BOARD-01~03 추천 게시판 | `GET/POST /posts`, 댓글·좋아요, 신고→관리자 모더레이션 |
+| F-STORE-05 매장 소유권 Claim | `POST /stores/{id}/claims` → 관리자 승인 시 `store.owner_id` 연결 |
+| F-CONQ-11 QR 정복 | 소유자가 `POST /stores/{id}/qr-tokens` 발급 → 손님 `POST /flags/qr` (GPS 없이 골드) |
 | F-ADMIN-01/02 | `GET /admin/flags/review-queue`, `POST .../approve\|invalidate` |
+| F-ADMIN-06 Claim 심사 | `GET /admin/claims`, `POST /admin/claims/{id}/approve\|reject` |
 | F-ADMIN-07 계정 정지 | `POST /admin/users/{id}/suspend\|reactivate` |
 | F-ADMIN-08 경험치·티어 조정 | `POST /admin/users/{id}/adjust-exp` — 티어 자동 재계산 |
 | F-ADMIN-09 콘텐츠 모더레이션 | `POST /admin/{posts,comments}/{id}/moderate`, `/admin/reports/{id}/resolve` |
@@ -116,9 +119,10 @@ ruff check .
 - **1단계 (매장/지도/기본 인증)** — ✅ 동작
 - **2단계 (골드/실버, 티어)** — ✅ 동작
 - **3단계 (랭킹, 게시판)** — ✅ 동작 (전국/친구 랭킹, 게시글·댓글·좋아요·신고)
-- **4단계 (관리자)** — ✅ 검토 큐·대시보드·계정 제재·경험치 조정·신고/콘텐츠 처리
+- **4단계 (관리자)** — ✅ 검토 큐·대시보드·계정 제재·경험치 조정·신고/콘텐츠 처리·Claim 심사
   · 매장 병합(F-ADMIN-04)·엑셀 대량 업로드(F-ADMIN-05)는 스텁
-- **5단계 (매장 Claim/QR/제휴)** — 🗂️ 모델(`store_claims`)만, 라우터 미구현
+- **5단계 (매장 Claim/QR)** — ✅ 소유권 신청→관리자 승인→소유자 연결, 정복용 QR 토큰 발급/검증
+  (`/stores/{id}/claim`, `/stores/{id}/manage`, `/qr?t=`) · 제휴/포인트는 스텁
 
 ---
 

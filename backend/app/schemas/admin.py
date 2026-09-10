@@ -62,5 +62,6 @@ class DashboardOut(BaseModel):
     flags_this_week: int
     pending_review: int
     pending_reports: int
+    pending_claims: int
     suspended_users: int
     average_store_rating: Decimal | None

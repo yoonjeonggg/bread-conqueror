@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import type { AdminClaim } from "@/lib/types";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -15,10 +16,14 @@ export default function AdminPage() {
   const { user, loading } = useAuth();
   const [data, setData] = useState<Dashboard | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
+  const [claims, setClaims] = useState<AdminClaim[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadReports = () =>
     api.adminReports().then(setReports).catch(() => setReports([]));
+
+  const loadClaims = () =>
+    api.adminClaims().then(setClaims).catch(() => setClaims([]));
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) router.replace("/");
@@ -31,6 +36,7 @@ export default function AdminPage() {
         .then(setData)
         .catch(() => setError("대시보드를 불러오지 못했습니다."));
       loadReports();
+      loadClaims();
     }
   }, [user]);
 
@@ -45,6 +51,7 @@ export default function AdminPage() {
         ["이번 주 깃발", data.flags_this_week],
         ["깃발 검토", data.pending_review],
         ["신고 대기", data.pending_reports],
+        ["소유권 신청", data.pending_claims],
         ["정지 계정", data.suspended_users],
         ["평균 평점", data.average_store_rating ?? "–"],
       ]
@@ -112,12 +119,65 @@ export default function AdminPage() {
         ))
       )}
 
+      <div className="section-title">매장 소유권 신청 ({claims.length})</div>
+      {claims.length === 0 ? (
+        <div className="card list-empty">대기 중인 신청이 없습니다.</div>
+      ) : (
+        claims.map((c) => (
+          <div key={c.id} className="card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span className="badge badge-gold">{c.store_name}</span>
+              <span className="muted" style={{ fontSize: 11 }}>
+                {new Date(c.created_at).toLocaleDateString("ko-KR")}
+              </span>
+            </div>
+            <p style={{ fontSize: 13, margin: "8px 0 4px" }}>
+              신청자 <strong>{c.user_nickname}</strong> · {c.contact_phone}
+            </p>
+            <a
+              href={c.business_license_image_url}
+              target="_blank"
+              rel="noreferrer"
+              className="link-accent"
+              style={{ fontSize: 12 }}
+            >
+              사업자등록증 보기 ↗
+            </a>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto", padding: "8px 12px" }}
+                onClick={async () => {
+                  await api.reviewClaim(c.id, true, "서류 확인 완료");
+                  loadClaims();
+                  api.adminDashboard().then(setData).catch(() => {});
+                }}
+              >
+                승인
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto", padding: "8px 12px" }}
+                onClick={async () => {
+                  await api.reviewClaim(c.id, false, "서류 미비");
+                  loadClaims();
+                  api.adminDashboard().then(setData).catch(() => {});
+                }}
+              >
+                반려
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+
       <div className="section-title">운영 메뉴 (API)</div>
       <div className="card muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
         · 깃발 검토 큐 <code>GET /admin/flags/review-queue</code>
         <br />· 계정 정지/해제 <code>POST /admin/users/&#123;id&#125;/suspend</code>
         <br />· 경험치 조정 <code>POST /admin/users/&#123;id&#125;/adjust-exp</code>
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
+        <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
         <br />· 매장 병합 · 엑셀 대량 업로드 — 다음 스프린트
       </div>
     </div>
