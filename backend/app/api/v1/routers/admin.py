@@ -4,10 +4,9 @@
 - F-ADMIN-07     계정 정지 / 해제
 - F-ADMIN-08     경험치·티어 수동 조정
 - F-ADMIN-04     중복 매장 병합
+- F-ADMIN-05     매장 CSV 대량 등록
 - F-ADMIN-09     신고 처리 · 게시글/댓글 모더레이션
 - F-ADMIN-10     통계 대시보드
-
-아직 스텁: 엑셀 대량 업로드(F-ADMIN-05).
 """
 
 from datetime import datetime, timedelta
@@ -37,6 +36,8 @@ from app.schemas.admin import (
     AdjustResultOut,
     AdminReportOut,
     AdminUserOut,
+    BulkUploadRequest,
+    BulkUploadResult,
     DashboardOut,
     ModerateRequest,
     ResolveReportRequest,
@@ -46,7 +47,12 @@ from app.schemas.admin import (
 )
 from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
-from app.services import notification_service, store_service, tier_service
+from app.services import (
+    notification_service,
+    store_import_service,
+    store_service,
+    tier_service,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -440,6 +446,27 @@ async def merge_store(
     )
     await db.commit()
     return StoreMergeResult(**vars(result))
+
+
+@router.post("/stores/bulk-upload", response_model=BulkUploadResult)
+async def bulk_upload_stores(
+    payload: BulkUploadRequest, db: DbSession, admin: CurrentAdmin
+) -> BulkUploadResult:
+    result = await store_import_service.import_stores(
+        db, csv_text=payload.csv_text, dry_run=payload.dry_run
+    )
+    if not payload.dry_run and result.created:
+        _log(
+            db,
+            admin.id,
+            "STORE_BULK_UPLOAD",
+            "STORE",
+            0,
+            f"created={result.created}; skipped={result.skipped_duplicate}; "
+            f"failed={result.failed}",
+        )
+    await db.commit()
+    return BulkUploadResult.model_validate(result)
 
 
 # --- 대시보드 (F-ADMIN-10) --------------------------------------------
