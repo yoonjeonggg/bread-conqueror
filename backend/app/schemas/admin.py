@@ -97,6 +97,24 @@ class BulkUploadResult(BaseModel):
     rows: list[BulkUploadRowResult]
 
 
+class AdminActionLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    admin_id: int
+    admin_nickname: str | None = None
+    action_type: str
+    target_type: str
+    target_id: int
+    detail: str | None
+    created_at: datetime
+
+
+class AdminActionLogListOut(BaseModel):
+    total: int
+    items: list[AdminActionLogOut]
+
+
 class DashboardOut(BaseModel):
     total_users: int
     total_stores: int

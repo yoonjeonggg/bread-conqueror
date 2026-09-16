@@ -372,4 +372,31 @@ export const api = {
       `/admin/reports/${reportId}/resolve`,
       { method: "POST", body: { status }, auth: true },
     ),
+
+  // 관리자 활동 감사 로그 (F-ADMIN-11)
+  adminLogs: (params?: {
+    action_type?: string;
+    target_type?: string;
+    admin_id?: number;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== "") qs.set(k, String(v));
+    });
+    return request<{
+      total: number;
+      items: {
+        id: number;
+        admin_id: number;
+        admin_nickname: string | null;
+        action_type: string;
+        target_type: string;
+        target_id: number;
+        detail: string | null;
+        created_at: string;
+      }[];
+    }>(`/admin/logs?${qs.toString()}`, { auth: true });
+  },
 };

@@ -11,6 +11,7 @@ import type { AdminClaim } from "@/lib/types";
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
 type CsvResult = Awaited<ReturnType<typeof api.bulkUploadStores>>;
+type LogEntry = Awaited<ReturnType<typeof api.adminLogs>>["items"][number];
 
 export default function AdminPage() {
   const router = useRouter();
@@ -28,6 +29,10 @@ export default function AdminPage() {
   const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvErr, setCsvErr] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logFilter, setLogFilter] = useState("");
+  const [logsErr, setLogsErr] = useState<string | null>(null);
 
   const runCsv = async (dryRun: boolean) => {
     setCsvErr(null);
@@ -48,6 +53,17 @@ export default function AdminPage() {
   const loadClaims = () =>
     api.adminClaims().then(setClaims).catch(() => setClaims([]));
 
+  const loadLogs = (actionType?: string) => {
+    setLogsErr(null);
+    api
+      .adminLogs({ action_type: actionType || undefined, limit: 50 })
+      .then((res) => {
+        setLogs(res.items);
+        setLogsTotal(res.total);
+      })
+      .catch(() => setLogsErr("로그를 불러오지 못했습니다."));
+  };
+
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) router.replace("/");
   }, [loading, user, router]);
@@ -60,6 +76,7 @@ export default function AdminPage() {
         .catch(() => setError("대시보드를 불러오지 못했습니다."));
       loadReports();
       loadClaims();
+      loadLogs();
     }
   }, [user]);
 
@@ -340,6 +357,72 @@ export default function AdminPage() {
         </button>
       </div>
 
+      <div className="section-title">
+        관리자 활동 로그 (F-ADMIN-11) · 총 {logsTotal}건
+      </div>
+      <div className="card">
+        <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+          <select
+            value={logFilter}
+            onChange={(e) => {
+              setLogFilter(e.target.value);
+              loadLogs(e.target.value);
+            }}
+            style={{ flex: 1 }}
+          >
+            <option value="">전체 액션</option>
+            <option value="FLAG_INVALIDATE">FLAG_INVALIDATE</option>
+            <option value="FLAG_APPROVE">FLAG_APPROVE</option>
+            <option value="USER_SUSPEND">USER_SUSPEND</option>
+            <option value="USER_REACTIVATE">USER_REACTIVATE</option>
+            <option value="USER_ADJUST_EXP">USER_ADJUST_EXP</option>
+            <option value="REPORT_RESOLVE">REPORT_RESOLVE</option>
+            <option value="POST_MODERATE">POST_MODERATE</option>
+            <option value="COMMENT_MODERATE">COMMENT_MODERATE</option>
+            <option value="CLAIM_APPROVE">CLAIM_APPROVE</option>
+            <option value="CLAIM_REJECT">CLAIM_REJECT</option>
+            <option value="STORE_MERGE">STORE_MERGE</option>
+            <option value="STORE_BULK_UPLOAD">STORE_BULK_UPLOAD</option>
+          </select>
+          <button
+            className="btn btn-ghost"
+            style={{ width: "auto", padding: "8px 12px" }}
+            onClick={() => loadLogs(logFilter)}
+          >
+            새로고침
+          </button>
+        </div>
+        {logsErr && <p className="error-text">{logsErr}</p>}
+        {logs.length === 0 ? (
+          <div className="list-empty">기록이 없습니다.</div>
+        ) : (
+          <div style={{ maxHeight: 320, overflowY: "auto" }}>
+            {logs.map((l) => (
+              <div
+                key={l.id}
+                className="row"
+                style={{
+                  justifyContent: "space-between",
+                  padding: "6px 0",
+                  borderBottom: "1px solid var(--border, #eee)",
+                  fontSize: 12,
+                }}
+              >
+                <span>
+                  <span className="badge badge-silver">{l.action_type}</span>{" "}
+                  {l.target_type}#{l.target_id}
+                  {l.detail ? ` · ${l.detail}` : ""}
+                </span>
+                <span className="muted" style={{ whiteSpace: "nowrap" }}>
+                  {l.admin_nickname ?? `#${l.admin_id}`} ·{" "}
+                  {new Date(l.created_at).toLocaleString("ko-KR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="section-title">운영 메뉴 (API)</div>
       <div className="card muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
         · 깃발 검토 큐 <code>GET /admin/flags/review-queue</code>
@@ -348,6 +431,7 @@ export default function AdminPage() {
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
         <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
         <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
+        <br />· 활동 감사 로그 조회 <code>GET /admin/logs</code>
       </div>
     </div>
   );
