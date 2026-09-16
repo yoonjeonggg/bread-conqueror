@@ -7,11 +7,13 @@
 - F-ADMIN-05     매장 CSV 대량 등록
 - F-ADMIN-09     신고 처리 · 게시글/댓글 모더레이션
 - F-ADMIN-10     통계 대시보드
+- F-ADMIN-11     관리자 활동 감사 로그 조회
 """
 
 from datetime import datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +36,8 @@ from app.models.user import User, UserStat
 from app.schemas.admin import (
     AdjustExpRequest,
     AdjustResultOut,
+    AdminActionLogListOut,
+    AdminActionLogOut,
     AdminReportOut,
     AdminUserOut,
     BulkUploadRequest,
@@ -501,4 +505,56 @@ async def dashboard(db: DbSession, admin: CurrentAdmin) -> DashboardOut:
         ),
         suspended_users=await count(User, User.status == UserStatus.SUSPENDED),
         average_store_rating=round(avg_rating, 2) if avg_rating is not None else None,
+    )
+
+
+# --- 활동 감사 로그 (F-ADMIN-11) ---------------------------------------
+
+
+@router.get("/logs", response_model=AdminActionLogListOut)
+async def list_logs(
+    db: DbSession,
+    admin: CurrentAdmin,
+    action_type: Annotated[str | None, Query(max_length=50)] = None,
+    target_type: Annotated[str | None, Query(max_length=50)] = None,
+    admin_id: Annotated[int | None, Query(ge=1)] = None,
+    since: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> AdminActionLogListOut:
+    conds = []
+    if action_type:
+        conds.append(AdminActionLog.action_type == action_type)
+    if target_type:
+        conds.append(AdminActionLog.target_type == target_type)
+    if admin_id:
+        conds.append(AdminActionLog.admin_id == admin_id)
+    if since:
+        conds.append(AdminActionLog.created_at >= since)
+
+    total = (
+        await db.execute(
+            select(func.count()).select_from(AdminActionLog).where(*conds)
+        )
+    ).scalar_one()
+
+    rows = (
+        await db.execute(
+            select(AdminActionLog, User.nickname)
+            .outerjoin(User, User.id == AdminActionLog.admin_id)
+            .where(*conds)
+            .order_by(AdminActionLog.created_at.desc(), AdminActionLog.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+
+    return AdminActionLogListOut(
+        total=total,
+        items=[
+            AdminActionLogOut.model_validate(
+                {**log.__dict__, "admin_nickname": nickname}
+            )
+            for log, nickname in rows
+        ],
     )
