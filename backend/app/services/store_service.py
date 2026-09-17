@@ -43,6 +43,22 @@ async def _count(db: AsyncSession, *where) -> int:
     return (await db.execute(stmt)).scalar_one()
 
 
+async def close_store(db: AsyncSession, store: Store) -> None:
+    """매장을 폐점 처리한다 (병합 시 source, 관리자 삭제 시 공통 사용).
+
+    소유권을 해제하고 집계를 0으로 되돌린다. 커밋은 라우터가 한다.
+    """
+    store.status = StoreStatus.CLOSED
+    store.owner_id = None
+    store.is_verified_owner = False
+    stat = await db.get(StoreStat, store.id)
+    if stat is not None:
+        stat.gold_flag_count = 0
+        stat.silver_flag_count = 0
+        stat.conqueror_count = 0
+        stat.average_rating = None
+
+
 async def merge_stores(
     db: AsyncSession, *, target: Store, source: Store
 ) -> MergeResult:
@@ -142,15 +158,7 @@ async def merge_stores(
         owner_inherited = True
 
     # source 폐점 처리 + 집계 0
-    source.status = StoreStatus.CLOSED
-    source.owner_id = None
-    source.is_verified_owner = False
-    source_stat = await db.get(StoreStat, source.id)
-    if source_stat is not None:
-        source_stat.gold_flag_count = 0
-        source_stat.silver_flag_count = 0
-        source_stat.conqueror_count = 0
-        source_stat.average_rating = None
+    await close_store(db, source)
 
     await db.flush()
 

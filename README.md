@@ -108,6 +108,7 @@ ruff check .
 | F-STORE-05 매장 소유권 Claim | `POST /stores/{id}/claims` → 관리자 승인 시 `store.owner_id` 연결 |
 | F-CONQ-11 QR 정복 | 소유자가 `POST /stores/{id}/qr-tokens` 발급 → 손님 `POST /flags/qr` (GPS 없이 골드) |
 | F-ADMIN-01/02 | `GET /admin/flags/review-queue`, `POST .../approve\|invalidate` |
+| F-ADMIN-03 매장 등록/수정/삭제 | `POST /admin/stores`(즉시 ACTIVE), `PATCH /admin/stores/{id}`(부분 수정), `DELETE /admin/stores/{id}`(폐점 소프트삭제, `store_service.close_store`) |
 | F-ADMIN-04 매장 병합 | `POST /admin/stores/{target}/merge` — 참조 이관·집계 재계산·source 폐점 (`services/store_service.py`) |
 | F-ADMIN-05 CSV 대량 등록 | `POST /admin/stores/bulk-upload` — 행별 검증·반경 30m 중복 스킵·dry-run·행별 리포트 (`services/store_import_service.py`) |
 | F-ADMIN-06 Claim 심사 | `GET /admin/claims`, `POST /admin/claims/{id}/approve\|reject` |
