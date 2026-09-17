@@ -110,12 +110,13 @@ ruff check .
 | F-ADMIN-01/02 | `GET /admin/flags/review-queue`, `POST .../approve\|invalidate` |
 | F-ADMIN-04 매장 병합 | `POST /admin/stores/{target}/merge` — 참조 이관·집계 재계산·source 폐점 (`services/store_service.py`) |
 | F-ADMIN-05 CSV 대량 등록 | `POST /admin/stores/bulk-upload` — 행별 검증·반경 30m 중복 스킵·dry-run·행별 리포트 (`services/store_import_service.py`) |
-| F-ADMIN-06 Claim 심사 | `GET /admin/claims`, `POST /admin/claims/{id}/approve\|reject` |
+| F-STORE-04 Claim 심사 | `GET /admin/claims`, `POST /admin/claims/{id}/approve\|reject` |
 | F-NOTI-01~03 인앱 알림 | `GET /notifications`, `/unread-count`, `POST /notifications/read` — 팔로우·댓글·좋아요·Claim 심사·티어 상승·QR 정복 시 생성 (`services/notification_service.py`) |
 | F-ADMIN-07 계정 정지 | `POST /admin/users/{id}/suspend\|reactivate` |
 | F-ADMIN-08 경험치·티어 조정 | `POST /admin/users/{id}/adjust-exp` — 티어 자동 재계산 |
 | F-ADMIN-09 콘텐츠 모더레이션 | `POST /admin/{posts,comments}/{id}/moderate`, `/admin/reports/{id}/resolve` |
 | F-ADMIN-10/11 | `GET /admin/stats/dashboard` — RBAC 의존성으로 전 라우트 보호 |
+| F-ADMIN-06 제휴 매장 관리 | `GET /admin/stores/partners`, `POST\|DELETE /admin/stores/{id}/partnership` — 등록/해제 시 소유자에게 알림, 병합 시 제휴 상태 승계 |
 
 모든 관리자 행위는 `admin_action_logs` 에 기록됩니다.
 

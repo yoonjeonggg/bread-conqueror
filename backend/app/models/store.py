@@ -49,6 +49,8 @@ class Store(Base, TimestampMixin):
     status: Mapped[StoreStatus] = mapped_column(
         Enum(StoreStatus), nullable=False, default=StoreStatus.ACTIVE
     )
+    is_partner: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    partnered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     stat: Mapped[StoreStat] = relationship(
         back_populates="store", uselist=False, cascade="all, delete-orphan"

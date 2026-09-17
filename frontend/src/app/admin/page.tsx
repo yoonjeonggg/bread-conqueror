@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { AdminClaim } from "@/lib/types";
+import type { AdminClaim, Store } from "@/lib/types";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -28,6 +28,12 @@ export default function AdminPage() {
   const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvErr, setCsvErr] = useState<string | null>(null);
+  const [partners, setPartners] = useState<Store[]>([]);
+  const [partnersTotal, setPartnersTotal] = useState(0);
+  const [partnerQuery, setPartnerQuery] = useState("");
+  const [partnerNewId, setPartnerNewId] = useState("");
+  const [partnerErr, setPartnerErr] = useState<string | null>(null);
+  const [partnerBusy, setPartnerBusy] = useState(false);
 
   const runCsv = async (dryRun: boolean) => {
     setCsvErr(null);
@@ -48,6 +54,17 @@ export default function AdminPage() {
   const loadClaims = () =>
     api.adminClaims().then(setClaims).catch(() => setClaims([]));
 
+  const loadPartners = (q?: string) => {
+    setPartnerErr(null);
+    api
+      .adminPartnerStores({ q: q || undefined, limit: 50 })
+      .then((res) => {
+        setPartners(res.items);
+        setPartnersTotal(res.total);
+      })
+      .catch(() => setPartnerErr("제휴 매장 목록을 불러오지 못했습니다."));
+  };
+
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) router.replace("/");
   }, [loading, user, router]);
@@ -60,6 +77,7 @@ export default function AdminPage() {
         .catch(() => setError("대시보드를 불러오지 못했습니다."));
       loadReports();
       loadClaims();
+      loadPartners();
     }
   }, [user]);
 
@@ -77,6 +95,7 @@ export default function AdminPage() {
         ["소유권 신청", data.pending_claims],
         ["정지 계정", data.suspended_users],
         ["평균 평점", data.average_store_rating ?? "–"],
+        ["제휴 매장", data.partner_stores],
       ]
     : [];
 
@@ -340,6 +359,96 @@ export default function AdminPage() {
         </button>
       </div>
 
+      <div className="section-title">제휴 매장 관리 (F-ADMIN-06) · 총 {partnersTotal}곳</div>
+      <div className="card">
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          매장 ID로 제휴를 등록/해제합니다. 소유자가 인증된 매장이면 알림이 발송됩니다.
+        </p>
+        <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="partner-new">매장 ID</label>
+            <input
+              id="partner-new"
+              value={partnerNewId}
+              inputMode="numeric"
+              onChange={(e) => setPartnerNewId(e.target.value.replace(/\D/g, ""))}
+            />
+          </div>
+          <button
+            className="btn btn-secondary"
+            style={{ width: "auto", padding: "8px 12px", alignSelf: "flex-end" }}
+            disabled={partnerBusy || !partnerNewId}
+            onClick={async () => {
+              setPartnerErr(null);
+              setPartnerBusy(true);
+              try {
+                await api.grantPartnership(Number(partnerNewId));
+                setPartnerNewId("");
+                loadPartners(partnerQuery);
+                api.adminDashboard().then(setData).catch(() => {});
+              } catch (e) {
+                setPartnerErr(
+                  e instanceof Error ? e.message : "제휴 등록에 실패했습니다.",
+                );
+              } finally {
+                setPartnerBusy(false);
+              }
+            }}
+          >
+            제휴 등록
+          </button>
+        </div>
+        {partnerErr && <p className="error-text">{partnerErr}</p>}
+
+        <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+          <input
+            placeholder="매장명/주소 검색"
+            value={partnerQuery}
+            onChange={(e) => {
+              setPartnerQuery(e.target.value);
+              loadPartners(e.target.value);
+            }}
+            style={{ flex: 1 }}
+          />
+        </div>
+
+        {partners.length === 0 ? (
+          <div className="list-empty">등록된 제휴 매장이 없습니다.</div>
+        ) : (
+          <div style={{ maxHeight: 280, overflowY: "auto" }}>
+            {partners.map((s) => (
+              <div
+                key={s.id}
+                className="row"
+                style={{
+                  justifyContent: "space-between",
+                  padding: "8px 0",
+                  borderBottom: "1px solid var(--border, #eee)",
+                }}
+              >
+                <span style={{ fontSize: 13 }}>
+                  <span className="badge badge-gold">#{s.id}</span> {s.name}
+                  <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>
+                    {s.address}
+                  </span>
+                </span>
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: "auto", padding: "4px 10px", fontSize: 12 }}
+                  onClick={async () => {
+                    await api.revokePartnership(s.id);
+                    loadPartners(partnerQuery);
+                    api.adminDashboard().then(setData).catch(() => {});
+                  }}
+                >
+                  제휴 해제
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="section-title">운영 메뉴 (API)</div>
       <div className="card muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
         · 깃발 검토 큐 <code>GET /admin/flags/review-queue</code>
@@ -348,6 +457,8 @@ export default function AdminPage() {
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
         <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
         <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
+        <br />· 제휴 등록/해제{" "}
+        <code>POST|DELETE /admin/stores/&#123;id&#125;/partnership</code>
       </div>
     </div>
   );

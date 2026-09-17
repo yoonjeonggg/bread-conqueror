@@ -7,13 +7,16 @@
 - F-ADMIN-05     매장 CSV 대량 등록
 - F-ADMIN-09     신고 처리 · 게시글/댓글 모더레이션
 - F-ADMIN-10     통계 대시보드
+- F-ADMIN-06     제휴 매장 목록 관리
 """
 
 from datetime import datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentAdmin, DbSession
 from app.models.enums import (
@@ -40,6 +43,8 @@ from app.schemas.admin import (
     BulkUploadResult,
     DashboardOut,
     ModerateRequest,
+    PartnershipRequest,
+    PartnerStoreListOut,
     ResolveReportRequest,
     StoreMergeRequest,
     StoreMergeResult,
@@ -47,6 +52,7 @@ from app.schemas.admin import (
 )
 from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
+from app.schemas.store import StoreOut
 from app.services import (
     notification_service,
     store_import_service,
@@ -469,6 +475,111 @@ async def bulk_upload_stores(
     return BulkUploadResult.model_validate(result)
 
 
+# --- 제휴 매장 관리 (F-ADMIN-06) ---------------------------------------
+
+
+@router.get("/stores/partners", response_model=PartnerStoreListOut)
+async def list_partner_stores(
+    db: DbSession,
+    admin: CurrentAdmin,
+    only_partners: bool = True,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> PartnerStoreListOut:
+    conds = []
+    if only_partners:
+        conds.append(Store.is_partner.is_(True))
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        conds.append(or_(Store.name.ilike(like), Store.address.ilike(like)))
+
+    total = (
+        await db.execute(select(func.count()).select_from(Store).where(*conds))
+    ).scalar_one()
+    rows = (
+        (
+            await db.execute(
+                select(Store)
+                .options(selectinload(Store.stat))
+                .where(*conds)
+                .order_by(Store.partnered_at.desc(), Store.id.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return PartnerStoreListOut(total=total, items=list(rows))
+
+
+@router.post("/stores/{store_id}/partnership", response_model=StoreOut)
+async def grant_partnership(
+    store_id: int,
+    payload: PartnershipRequest,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> Store:
+    store = await db.get(Store, store_id)
+    if store is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if store.is_partner:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 제휴 매장입니다."
+        )
+
+    store.is_partner = True
+    store.partnered_at = datetime.utcnow()
+    _log(db, admin.id, "STORE_PARTNERSHIP_GRANT", "STORE", store_id, payload.note)
+    if store.owner_id is not None:
+        await notification_service.create(
+            db,
+            recipient_id=store.owner_id,
+            actor_id=admin.id,
+            type=NotificationType.PARTNERSHIP_GRANTED,
+            message=f"'{store.name}' 매장이 제휴 매장으로 등록되었습니다.",
+            target_type="STORE",
+            target_id=store_id,
+        )
+    await db.commit()
+    await db.refresh(store, attribute_names=["stat"])
+    return store
+
+
+@router.delete("/stores/{store_id}/partnership", response_model=StoreOut)
+async def revoke_partnership(
+    store_id: int,
+    payload: PartnershipRequest,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> Store:
+    store = await db.get(Store, store_id)
+    if store is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if not store.is_partner:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="제휴 매장이 아닙니다."
+        )
+
+    store.is_partner = False
+    store.partnered_at = None
+    _log(db, admin.id, "STORE_PARTNERSHIP_REVOKE", "STORE", store_id, payload.note)
+    if store.owner_id is not None:
+        await notification_service.create(
+            db,
+            recipient_id=store.owner_id,
+            actor_id=admin.id,
+            type=NotificationType.PARTNERSHIP_REVOKED,
+            message=f"'{store.name}' 매장의 제휴가 해제되었습니다.",
+            target_type="STORE",
+            target_id=store_id,
+        )
+    await db.commit()
+    await db.refresh(store, attribute_names=["stat"])
+    return store
+
+
 # --- 대시보드 (F-ADMIN-10) --------------------------------------------
 
 
@@ -501,4 +612,5 @@ async def dashboard(db: DbSession, admin: CurrentAdmin) -> DashboardOut:
         ),
         suspended_users=await count(User, User.status == UserStatus.SUSPENDED),
         average_store_rating=round(avg_rating, 2) if avg_rating is not None else None,
+        partner_stores=await count(Store, Store.is_partner.is_(True)),
     )

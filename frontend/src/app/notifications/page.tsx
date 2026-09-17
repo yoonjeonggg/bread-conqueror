@@ -18,6 +18,8 @@ const ICON: Record<NotificationType, string> = {
   FLAG_APPROVED: "🥇",
   FLAG_INVALIDATED: "⚠️",
   QR_CONQUEST: "🚩",
+  PARTNERSHIP_GRANTED: "🤝",
+  PARTNERSHIP_REVOKED: "✂️",
 };
 
 function hrefFor(n: AppNotification): string | null {

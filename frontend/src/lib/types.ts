@@ -41,6 +41,8 @@ export interface Store {
   is_verified_owner: boolean;
   owner_id: number | null;
   status: string;
+  is_partner: boolean;
+  partnered_at: string | null;
   stat: StoreStat | null;
   distance_m?: number | null;
   conquered_by_me?: boolean;
@@ -180,7 +182,9 @@ export type NotificationType =
   | "TIER_UP"
   | "FLAG_APPROVED"
   | "FLAG_INVALIDATED"
-  | "QR_CONQUEST";
+  | "QR_CONQUEST"
+  | "PARTNERSHIP_GRANTED"
+  | "PARTNERSHIP_REVOKED";
 
 export interface AppNotification {
   id: number;

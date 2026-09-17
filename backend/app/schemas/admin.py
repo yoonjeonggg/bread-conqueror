@@ -4,6 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ContentStatus, ReportStatus, ReportTargetType, UserStatus
+from app.schemas.store import StoreOut
 
 
 class SuspendRequest(BaseModel):
@@ -97,6 +98,15 @@ class BulkUploadResult(BaseModel):
     rows: list[BulkUploadRowResult]
 
 
+class PartnershipRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=255)
+
+
+class PartnerStoreListOut(BaseModel):
+    total: int
+    items: list[StoreOut]
+
+
 class DashboardOut(BaseModel):
     total_users: int
     total_stores: int
@@ -108,3 +118,4 @@ class DashboardOut(BaseModel):
     pending_claims: int
     suspended_users: int
     average_store_rating: Decimal | None
+    partner_stores: int
