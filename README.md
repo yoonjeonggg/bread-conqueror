@@ -102,7 +102,7 @@ ruff check .
 | F-CONQ-05 실버 증빙 신뢰도 | `POST /flags/exif-preview` — `utils/exif.py`, EXIF 촬영시각/GPS → trust |
 | F-CONQ-10 신고 | `POST /reports` → 관리자 큐 |
 | F-TIER-01~03 티어 산정 | `services/tier_service.py` — exp + 골드비율 게이트 |
-| F-RANK-01~03 랭킹 | `GET /rankings/{national,regional,friends}` (Redis ZSET, DB fallback) |
+| F-RANK-01~03 랭킹 | `GET /rankings/{national,regional,friends}` (Redis ZSET, DB fallback) — 프론트 `/ranking` 전국/지역/친구 탭 |
 | F-PROF-01 프로필 | `GET /users/me`, `GET /users/{id}`, 팔로우 카운트 |
 | F-BOARD-01~03 추천 게시판 | `GET/POST /posts`, 댓글·좋아요, 신고→관리자 모더레이션 |
 | F-STORE-05 매장 소유권 Claim | `POST /stores/{id}/claims` → 관리자 승인 시 `store.owner_id` 연결 |

@@ -283,6 +283,12 @@ export const api = {
   friendsRanking: () =>
     request<RankingResponse>("/rankings/friends", { auth: true }),
 
+  regionalRanking: (regionSido: string) =>
+    request<RankingResponse>(
+      `/rankings/regional?region_sido=${encodeURIComponent(regionSido)}&limit=50`,
+      { auth: true },
+    ),
+
   // 매장 검색 / 필터 (F-SEARCH)
   searchStores: (params: {
     q?: string;
