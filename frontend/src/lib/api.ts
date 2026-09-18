@@ -1,5 +1,6 @@
 import type {
   AdminClaim,
+  AdminUser,
   AppNotification,
   Comment,
   ConquestResponse,
@@ -371,5 +372,66 @@ export const api = {
     request<{ id: number; status: string }>(
       `/admin/reports/${reportId}/resolve`,
       { method: "POST", body: { status }, auth: true },
+    ),
+
+  // 관리자 - 깃발 검토 큐 (F-ADMIN-01/02)
+  adminFlagQueue: () =>
+    request<Flag[]>("/admin/flags/review-queue", { auth: true }),
+
+  invalidateFlag: (flagId: number) =>
+    request<Flag>(`/admin/flags/${flagId}/invalidate`, {
+      method: "POST",
+      auth: true,
+    }),
+
+  approveFlag: (flagId: number) =>
+    request<Flag>(`/admin/flags/${flagId}/approve`, {
+      method: "POST",
+      auth: true,
+    }),
+
+  // 관리자 - 계정 관리 (F-ADMIN-07/08)
+  adminUsers: () => request<AdminUser[]>("/admin/users", { auth: true }),
+
+  suspendUser: (userId: number, reason: string) =>
+    request<AdminUser>(`/admin/users/${userId}/suspend`, {
+      method: "POST",
+      body: { reason },
+      auth: true,
+    }),
+
+  reactivateUser: (userId: number) =>
+    request<AdminUser>(`/admin/users/${userId}/reactivate`, {
+      method: "POST",
+      auth: true,
+    }),
+
+  adjustExp: (userId: number, expDelta: number, reason: string) =>
+    request<{
+      user_id: number;
+      exp: number;
+      tier_level: number;
+      tier_changed: boolean;
+    }>(`/admin/users/${userId}/adjust-exp`, {
+      method: "POST",
+      body: { exp_delta: expDelta, reason },
+      auth: true,
+    }),
+
+  // 관리자 - 콘텐츠 모더레이션 (F-ADMIN-09 / F-BOARD-03)
+  moderatePost: (postId: number, status: "HIDDEN" | "DELETED", reason?: string) =>
+    request<{ post_id: number; status: string }>(
+      `/admin/posts/${postId}/moderate`,
+      { method: "POST", body: { status, reason: reason ?? null }, auth: true },
+    ),
+
+  moderateComment: (
+    commentId: number,
+    status: "HIDDEN" | "DELETED",
+    reason?: string,
+  ) =>
+    request<{ comment_id: number; status: string }>(
+      `/admin/comments/${commentId}/moderate`,
+      { method: "POST", body: { status, reason: reason ?? null }, auth: true },
     ),
 };

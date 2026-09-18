@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { AdminClaim } from "@/lib/types";
+import type { AdminClaim, AdminUser, Flag } from "@/lib/types";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -28,6 +28,14 @@ export default function AdminPage() {
   const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvErr, setCsvErr] = useState<string | null>(null);
+  const [flagQueue, setFlagQueue] = useState<Flag[]>([]);
+  const [flagErr, setFlagErr] = useState<string | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userErr, setUserErr] = useState<string | null>(null);
+  const [suspendReason, setSuspendReason] = useState<Record<number, string>>({});
+  const [expDelta, setExpDelta] = useState<Record<number, string>>({});
+  const [userBusy, setUserBusy] = useState<number | null>(null);
+  const [showAllUsers, setShowAllUsers] = useState(false);
 
   const runCsv = async (dryRun: boolean) => {
     setCsvErr(null);
@@ -48,6 +56,18 @@ export default function AdminPage() {
   const loadClaims = () =>
     api.adminClaims().then(setClaims).catch(() => setClaims([]));
 
+  const loadFlagQueue = () =>
+    api
+      .adminFlagQueue()
+      .then(setFlagQueue)
+      .catch(() => setFlagErr("깃발 검토 큐를 불러오지 못했습니다."));
+
+  const loadUsers = () =>
+    api
+      .adminUsers()
+      .then(setUsers)
+      .catch(() => setUserErr("사용자 목록을 불러오지 못했습니다."));
+
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) router.replace("/");
   }, [loading, user, router]);
@@ -60,6 +80,8 @@ export default function AdminPage() {
         .catch(() => setError("대시보드를 불러오지 못했습니다."));
       loadReports();
       loadClaims();
+      loadFlagQueue();
+      loadUsers();
     }
   }, [user]);
 
@@ -137,9 +159,182 @@ export default function AdminPage() {
               >
                 반려
               </button>
+              {(r.target_type === "POST" || r.target_type === "COMMENT") && (
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: "auto", padding: "8px 12px" }}
+                  onClick={async () => {
+                    if (r.target_type === "POST") {
+                      await api.moderatePost(r.target_id, "HIDDEN", r.reason);
+                    } else {
+                      await api.moderateComment(r.target_id, "HIDDEN", r.reason);
+                    }
+                    await api.resolveReport(r.id, "REVIEWED");
+                    loadReports();
+                  }}
+                >
+                  콘텐츠 숨김
+                </button>
+              )}
             </div>
           </div>
         ))
+      )}
+
+      <div className="section-title">깃발 검토 큐 ({flagQueue.length})</div>
+      {flagErr && <div className="card list-empty">{flagErr}</div>}
+      {!flagErr && flagQueue.length === 0 ? (
+        <div className="card list-empty">검토할 깃발이 없습니다.</div>
+      ) : (
+        flagQueue.map((f) => (
+          <div key={f.id} className="card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}>
+                {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"} · 매장 #{f.store_id}
+              </span>
+              <span className="muted" style={{ fontSize: 11 }}>
+                {new Date(f.created_at).toLocaleDateString("ko-KR")}
+              </span>
+            </div>
+            <p className="muted" style={{ fontSize: 13, margin: "8px 0" }}>
+              작성자 #{f.user_id} · 증빙 {f.evidence_type} ·{" "}
+              {f.is_flagged ? "🚩 자동 이상탐지" : "신고 접수"} · {f.status}
+            </p>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto", padding: "8px 12px" }}
+                onClick={async () => {
+                  await api.approveFlag(f.id);
+                  loadFlagQueue();
+                }}
+              >
+                정상 승인
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto", padding: "8px 12px" }}
+                onClick={async () => {
+                  await api.invalidateFlag(f.id);
+                  loadFlagQueue();
+                }}
+              >
+                무효 처리
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+
+      <div className="section-title">사용자 관리 ({users.length})</div>
+      {userErr && <div className="card list-empty">{userErr}</div>}
+      {!userErr &&
+        (showAllUsers ? users : users.slice(0, 15)).map((u) => (
+          <div key={u.id} className="card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span>
+                <strong>{u.nickname}</strong>{" "}
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {u.email}
+                </span>
+              </span>
+              <span
+                className={`badge ${u.status === "ACTIVE" ? "badge-verified" : "badge-silver"}`}
+              >
+                {u.status}
+              </span>
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              {u.status === "ACTIVE" ? (
+                <>
+                  <input
+                    placeholder="정지 사유"
+                    value={suspendReason[u.id] ?? ""}
+                    style={{ flex: 1, minWidth: 120 }}
+                    onChange={(e) =>
+                      setSuspendReason((s) => ({ ...s, [u.id]: e.target.value }))
+                    }
+                  />
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: "auto", padding: "8px 12px" }}
+                    disabled={
+                      userBusy === u.id || (suspendReason[u.id] ?? "").trim().length < 2
+                    }
+                    onClick={async () => {
+                      setUserBusy(u.id);
+                      try {
+                        await api.suspendUser(u.id, suspendReason[u.id].trim());
+                        loadUsers();
+                      } finally {
+                        setUserBusy(null);
+                      }
+                    }}
+                  >
+                    정지
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: "auto", padding: "8px 12px" }}
+                  disabled={userBusy === u.id}
+                  onClick={async () => {
+                    setUserBusy(u.id);
+                    try {
+                      await api.reactivateUser(u.id);
+                      loadUsers();
+                    } finally {
+                      setUserBusy(null);
+                    }
+                  }}
+                >
+                  활성화
+                </button>
+              )}
+              <input
+                placeholder="경험치 증감(±)"
+                inputMode="numeric"
+                value={expDelta[u.id] ?? ""}
+                style={{ width: 110 }}
+                onChange={(e) =>
+                  setExpDelta((s) => ({
+                    ...s,
+                    [u.id]: e.target.value.replace(/[^-\d]/g, ""),
+                  }))
+                }
+              />
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto", padding: "8px 12px" }}
+                disabled={userBusy === u.id || !expDelta[u.id]}
+                onClick={async () => {
+                  setUserBusy(u.id);
+                  try {
+                    await api.adjustExp(
+                      u.id,
+                      Number(expDelta[u.id]),
+                      "관리자 수동 조정",
+                    );
+                    setExpDelta((s) => ({ ...s, [u.id]: "" }));
+                  } finally {
+                    setUserBusy(null);
+                  }
+                }}
+              >
+                경험치 조정
+              </button>
+            </div>
+          </div>
+        ))}
+      {!userErr && !showAllUsers && users.length > 15 && (
+        <button
+          className="btn btn-ghost"
+          style={{ marginTop: 4 }}
+          onClick={() => setShowAllUsers(true)}
+        >
+          나머지 {users.length - 15}명 더 보기
+        </button>
       )}
 
       <div className="section-title">매장 소유권 신청 ({claims.length})</div>
@@ -340,15 +535,6 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <div className="section-title">운영 메뉴 (API)</div>
-      <div className="card muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
-        · 깃발 검토 큐 <code>GET /admin/flags/review-queue</code>
-        <br />· 계정 정지/해제 <code>POST /admin/users/&#123;id&#125;/suspend</code>
-        <br />· 경험치 조정 <code>POST /admin/users/&#123;id&#125;/adjust-exp</code>
-        <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
-        <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
-        <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
-      </div>
     </div>
   );
 }
