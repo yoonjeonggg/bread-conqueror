@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ShareCard } from "@/components/ShareCard";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -116,6 +117,19 @@ export default function ConquerPage() {
               </p>
             )}
           </div>
+          {user && store && (
+            <ShareCard
+              data={{
+                storeName: store.name,
+                flagType: mode,
+                upgraded: result.upgraded_from_silver,
+                nickname: user.nickname,
+                tierLevel: result.new_tier_level,
+                expGranted: result.exp_granted,
+                date: new Date(result.flag.created_at),
+              }}
+            />
+          )}
           <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
             <Link href={`/stores/${storeId}`}>
               <button className="btn btn-secondary">매장으로 돌아가기</button>

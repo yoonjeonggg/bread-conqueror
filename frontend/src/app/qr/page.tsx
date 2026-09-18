@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
+import { ShareCard } from "@/components/ShareCard";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ConquestResponse } from "@/lib/types";
@@ -19,6 +20,7 @@ function QrConquer() {
   );
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ConquestResponse | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -42,6 +44,10 @@ function QrConquer() {
         setResult(res);
         setState("done");
         await refresh();
+        api
+          .store(res.flag.store_id)
+          .then((s) => setStoreName(s.name))
+          .catch(() => setStoreName(null));
       })
       .catch((e) => {
         setError(e instanceof ApiError ? e.message : "정복에 실패했습니다.");
@@ -91,6 +97,19 @@ function QrConquer() {
             </p>
           )}
         </div>
+        {user && result && storeName && (
+          <ShareCard
+            data={{
+              storeName,
+              flagType: "GOLD",
+              upgraded: result.upgraded_from_silver,
+              nickname: user.nickname,
+              tierLevel: result.new_tier_level,
+              expGranted: result.exp_granted,
+              date: new Date(result.flag.created_at),
+            }}
+          />
+        )}
         <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
           <Link href={`/stores/${result?.flag.store_id}`}>
             <button className="btn btn-secondary">매장 보기</button>
