@@ -28,6 +28,14 @@ export default function AdminPage() {
   const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvErr, setCsvErr] = useState<string | null>(null);
+  const [newStoreName, setNewStoreName] = useState("");
+  const [newStoreAddress, setNewStoreAddress] = useState("");
+  const [newStoreLat, setNewStoreLat] = useState("");
+  const [newStoreLng, setNewStoreLng] = useState("");
+  const [storeCrudMsg, setStoreCrudMsg] = useState<string | null>(null);
+  const [storeCrudBusy, setStoreCrudBusy] = useState(false);
+  const [editStoreId, setEditStoreId] = useState("");
+  const [editStoreName, setEditStoreName] = useState("");
 
   const runCsv = async (dryRun: boolean) => {
     setCsvErr(null);
@@ -275,6 +283,163 @@ export default function AdminPage() {
         )}
       </div>
 
+      <div className="section-title">매장 등록/수정/삭제 (F-ADMIN-03)</div>
+      <div className="card">
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          관리자가 직접 등록한 매장은 검토 없이 바로 노출됩니다(ACTIVE).
+        </p>
+        {storeCrudMsg && (
+          <p
+            style={{ fontSize: 13, margin: "4px 0 8px" }}
+            className={storeCrudMsg.startsWith("✅") ? "link-accent" : "error-text"}
+          >
+            {storeCrudMsg}
+          </p>
+        )}
+        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <div className="field" style={{ flex: "1 1 160px" }}>
+            <label htmlFor="ns-name">매장명</label>
+            <input
+              id="ns-name"
+              value={newStoreName}
+              onChange={(e) => setNewStoreName(e.target.value)}
+            />
+          </div>
+          <div className="field" style={{ flex: "1 1 200px" }}>
+            <label htmlFor="ns-addr">주소</label>
+            <input
+              id="ns-addr"
+              value={newStoreAddress}
+              onChange={(e) => setNewStoreAddress(e.target.value)}
+            />
+          </div>
+          <div className="field" style={{ flex: "1 1 100px" }}>
+            <label htmlFor="ns-lat">위도</label>
+            <input
+              id="ns-lat"
+              value={newStoreLat}
+              onChange={(e) => setNewStoreLat(e.target.value)}
+            />
+          </div>
+          <div className="field" style={{ flex: "1 1 100px" }}>
+            <label htmlFor="ns-lng">경도</label>
+            <input
+              id="ns-lng"
+              value={newStoreLng}
+              onChange={(e) => setNewStoreLng(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          className="btn btn-secondary"
+          style={{ marginTop: 8 }}
+          disabled={
+            storeCrudBusy ||
+            !newStoreName ||
+            !newStoreAddress ||
+            !newStoreLat ||
+            !newStoreLng
+          }
+          onClick={async () => {
+            setStoreCrudMsg(null);
+            setStoreCrudBusy(true);
+            try {
+              const s = await api.createStoreAdmin({
+                name: newStoreName,
+                address: newStoreAddress,
+                lat: Number(newStoreLat),
+                lng: Number(newStoreLng),
+              });
+              setStoreCrudMsg(`✅ #${s.id} '${s.name}' 등록됨`);
+              setNewStoreName("");
+              setNewStoreAddress("");
+              setNewStoreLat("");
+              setNewStoreLng("");
+              api.adminDashboard().then(setData).catch(() => {});
+            } catch (e) {
+              setStoreCrudMsg(
+                e instanceof Error ? e.message : "등록에 실패했습니다.",
+              );
+            } finally {
+              setStoreCrudBusy(false);
+            }
+          }}
+        >
+          {storeCrudBusy ? "처리 중…" : "매장 등록"}
+        </button>
+
+        <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid var(--border, #eee)" }} />
+
+        <div className="row" style={{ gap: 10 }}>
+          <div className="field" style={{ flex: "0 0 100px" }}>
+            <label htmlFor="es-id">매장 ID</label>
+            <input
+              id="es-id"
+              value={editStoreId}
+              inputMode="numeric"
+              onChange={(e) => setEditStoreId(e.target.value.replace(/\D/g, ""))}
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="es-name">새 매장명 (비우면 이름 변경 안 함)</label>
+            <input
+              id="es-name"
+              value={editStoreName}
+              onChange={(e) => setEditStoreName(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          <button
+            className="btn btn-ghost"
+            style={{ width: "auto", padding: "8px 12px" }}
+            disabled={storeCrudBusy || !editStoreId || !editStoreName}
+            onClick={async () => {
+              setStoreCrudMsg(null);
+              setStoreCrudBusy(true);
+              try {
+                const s = await api.updateStoreAdmin(Number(editStoreId), {
+                  name: editStoreName,
+                });
+                setStoreCrudMsg(`✅ #${s.id} 이름이 '${s.name}'(으)로 변경됨`);
+                setEditStoreName("");
+              } catch (e) {
+                setStoreCrudMsg(
+                  e instanceof Error ? e.message : "수정에 실패했습니다.",
+                );
+              } finally {
+                setStoreCrudBusy(false);
+              }
+            }}
+          >
+            이름 수정
+          </button>
+          <button
+            className="btn btn-ghost"
+            style={{ width: "auto", padding: "8px 12px" }}
+            disabled={storeCrudBusy || !editStoreId}
+            onClick={async () => {
+              setStoreCrudMsg(null);
+              setStoreCrudBusy(true);
+              try {
+                const s = await api.deleteStoreAdmin(Number(editStoreId));
+                setStoreCrudMsg(`✅ #${s.id} 폐점 처리됨`);
+                setEditStoreId("");
+                api.adminDashboard().then(setData).catch(() => {});
+              } catch (e) {
+                setStoreCrudMsg(
+                  e instanceof Error ? e.message : "삭제에 실패했습니다.",
+                );
+              } finally {
+                setStoreCrudBusy(false);
+              }
+            }}
+          >
+            폐점(삭제)
+          </button>
+        </div>
+      </div>
+
       <div className="section-title">중복 매장 병합 (F-ADMIN-04)</div>
       <div className="card">
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
@@ -347,6 +512,9 @@ export default function AdminPage() {
         <br />· 경험치 조정 <code>POST /admin/users/&#123;id&#125;/adjust-exp</code>
         <br />· 콘텐츠 모더레이션 <code>POST /admin/posts/&#123;id&#125;/moderate</code>
         <br />· 소유권 신청 승인 <code>POST /admin/claims/&#123;id&#125;/approve</code>
+        <br />· 매장 등록/수정/삭제{" "}
+        <code>POST /admin/stores</code>,{" "}
+        <code>PATCH|DELETE /admin/stores/&#123;id&#125;</code>
         <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
       </div>
     </div>

@@ -259,6 +259,40 @@ export const api = {
       auth: true,
     }),
 
+  // 매장 등록/수정/삭제 (F-ADMIN-03)
+  createStoreAdmin: (payload: {
+    name: string;
+    address: string;
+    region_sido?: string | null;
+    lat: number;
+    lng: number;
+    category?: string | null;
+    thumbnail_url?: string | null;
+  }) =>
+    request<Store>("/admin/stores", { method: "POST", body: payload, auth: true }),
+
+  updateStoreAdmin: (
+    storeId: number,
+    payload: Partial<{
+      name: string;
+      address: string;
+      region_sido: string | null;
+      lat: number;
+      lng: number;
+      category: string | null;
+      thumbnail_url: string | null;
+      status: string;
+    }>,
+  ) =>
+    request<Store>(`/admin/stores/${storeId}`, {
+      method: "PATCH",
+      body: payload,
+      auth: true,
+    }),
+
+  deleteStoreAdmin: (storeId: number) =>
+    request<Store>(`/admin/stores/${storeId}`, { method: "DELETE", auth: true }),
+
   mergeStores: (targetId: number, sourceId: number, note?: string) =>
     request<{
       target_id: number;

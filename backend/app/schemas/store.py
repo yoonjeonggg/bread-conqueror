@@ -28,6 +28,17 @@ class StoreCreate(StoreBase):
     pass
 
 
+class StoreAdminUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=100)
+    address: str | None = Field(default=None, max_length=255)
+    region_sido: str | None = Field(default=None, max_length=50)
+    lat: Decimal | None = Field(default=None, ge=-90, le=90)
+    lng: Decimal | None = Field(default=None, ge=-180, le=180)
+    category: str | None = Field(default=None, max_length=50)
+    thumbnail_url: str | None = Field(default=None, max_length=500)
+    status: StoreStatus | None = None
+
+
 class StoreOut(StoreBase):
     model_config = ConfigDict(from_attributes=True)
 

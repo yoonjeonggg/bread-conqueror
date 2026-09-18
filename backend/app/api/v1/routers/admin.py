@@ -7,6 +7,7 @@
 - F-ADMIN-05     매장 CSV 대량 등록
 - F-ADMIN-09     신고 처리 · 게시글/댓글 모더레이션
 - F-ADMIN-10     통계 대시보드
+- F-ADMIN-03     매장 등록/수정/삭제
 """
 
 from datetime import datetime, timedelta
@@ -14,6 +15,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentAdmin, DbSession
 from app.models.enums import (
@@ -22,6 +24,8 @@ from app.models.enums import (
     FlagType,
     NotificationType,
     ReportStatus,
+    StoreCreatedSource,
+    StoreStatus,
     UserStatus,
 )
 from app.models.flag import Flag
@@ -47,6 +51,7 @@ from app.schemas.admin import (
 )
 from app.schemas.claim import AdminClaimOut, ClaimOut, ClaimReviewRequest
 from app.schemas.flag import FlagOut
+from app.schemas.store import StoreAdminUpdate, StoreCreate, StoreOut
 from app.services import (
     notification_service,
     store_import_service,
@@ -414,6 +419,82 @@ async def reject_claim(
     admin: CurrentAdmin,
 ) -> StoreClaim:
     return await _decide_claim(db, admin, claim_id, approve=False, note=payload.note)
+
+
+# --- 매장 등록/수정/삭제 (F-ADMIN-03) -----------------------------------
+
+
+@router.post("/stores", response_model=StoreOut, status_code=status.HTTP_201_CREATED)
+async def create_store(
+    payload: StoreCreate, db: DbSession, admin: CurrentAdmin
+) -> Store:
+    """관리자 직접 등록 — 사용자 등록(`POST /stores`)과 달리 중복검사 없이 바로 ACTIVE."""
+    store = Store(
+        **payload.model_dump(),
+        created_source=StoreCreatedSource.AUTO_COLLECTED,
+        status=StoreStatus.ACTIVE,
+    )
+    store.stat = StoreStat()
+    db.add(store)
+    await db.flush()
+    _log(db, admin.id, "STORE_CREATE", "STORE", store.id, store.name)
+    await db.commit()
+    await db.refresh(store, attribute_names=["stat"])
+    return store
+
+
+@router.patch("/stores/{store_id}", response_model=StoreOut)
+async def update_store(
+    store_id: int,
+    payload: StoreAdminUpdate,
+    db: DbSession,
+    admin: CurrentAdmin,
+) -> Store:
+    store = (
+        await db.execute(
+            select(Store)
+            .options(selectinload(Store.stat))
+            .where(Store.id == store_id)
+        )
+    ).scalar_one_or_none()
+    if store is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    changes = payload.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(store, field, value)
+    if changes:
+        _log(
+            db,
+            admin.id,
+            "STORE_UPDATE",
+            "STORE",
+            store_id,
+            ", ".join(f"{k}={v}" for k, v in changes.items()),
+        )
+    await db.commit()
+    await db.refresh(store, attribute_names=["stat"])
+    return store
+
+
+@router.delete("/stores/{store_id}", response_model=StoreOut)
+async def delete_store(
+    store_id: int, db: DbSession, admin: CurrentAdmin
+) -> Store:
+    """폐점 처리 (소프트 삭제) — 병합 시 source 폐점 처리와 동일 로직."""
+    store = await db.get(Store, store_id)
+    if store is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if store.status == StoreStatus.CLOSED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 폐점 처리된 매장입니다."
+        )
+
+    await store_service.close_store(db, store)
+    _log(db, admin.id, "STORE_DELETE", "STORE", store_id, store.name)
+    await db.commit()
+    await db.refresh(store, attribute_names=["stat"])
+    return store
 
 
 # --- 매장 병합 (F-ADMIN-04) ------------------------------------------
