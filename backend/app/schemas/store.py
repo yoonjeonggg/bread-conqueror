@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,6 +37,8 @@ class StoreOut(StoreBase):
     is_verified_owner: bool
     owner_id: int | None = None
     status: StoreStatus
+    is_partner: bool = False
+    partnered_at: datetime | None = None
     stat: StoreStatOut | None = None
 
 

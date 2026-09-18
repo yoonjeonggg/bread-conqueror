@@ -141,10 +141,17 @@ async def merge_stores(
         target.is_verified_owner = True
         owner_inherited = True
 
+    # 제휴 승계: target 이 비제휴이고 source 가 제휴 매장이면 이어받는다
+    if not target.is_partner and source.is_partner:
+        target.is_partner = True
+        target.partnered_at = source.partnered_at
+
     # source 폐점 처리 + 집계 0
     source.status = StoreStatus.CLOSED
     source.owner_id = None
     source.is_verified_owner = False
+    source.is_partner = False
+    source.partnered_at = None
     source_stat = await db.get(StoreStat, source.id)
     if source_stat is not None:
         source_stat.gold_flag_count = 0

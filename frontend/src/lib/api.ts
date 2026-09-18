@@ -276,6 +276,37 @@ export const api = {
       auth: true,
     }),
 
+  // 제휴 매장 관리 (F-ADMIN-06)
+  adminPartnerStores: (params?: {
+    only_partners?: boolean;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== "") qs.set(k, String(v));
+    });
+    return request<{ total: number; items: Store[] }>(
+      `/admin/stores/partners?${qs.toString()}`,
+      { auth: true },
+    );
+  },
+
+  grantPartnership: (storeId: number, note?: string) =>
+    request<Store>(`/admin/stores/${storeId}/partnership`, {
+      method: "POST",
+      body: { note: note ?? null },
+      auth: true,
+    }),
+
+  revokePartnership: (storeId: number, note?: string) =>
+    request<Store>(`/admin/stores/${storeId}/partnership`, {
+      method: "DELETE",
+      body: { note: note ?? null },
+      auth: true,
+    }),
+
   // rankings
   nationalRanking: () =>
     request<RankingResponse>("/rankings/national?limit=50", { auth: true }),
@@ -353,6 +384,7 @@ export const api = {
       pending_claims: number;
       suspended_users: number;
       average_store_rating: number | null;
+      partner_stores: number;
     }>("/admin/stats/dashboard", { auth: true }),
 
   adminReports: () =>
