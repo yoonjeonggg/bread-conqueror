@@ -154,6 +154,14 @@ export interface AdminClaim extends StoreClaim {
   contact_phone: string;
 }
 
+export interface AdminUser {
+  id: number;
+  nickname: string;
+  email: string;
+  status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
+  role: string;
+}
+
 export interface WeeklyMission {
   code: string;
   title: string;
