@@ -3,9 +3,15 @@
 Tier is derived from accumulated exp, gated by a gold-flag-ratio requirement on
 the upper tiers. Policy values live in the tier_policies table so admins can tune
 them without a deploy.
+
+`tier_policies` has 5 static rows but `_ladder()` is hit on every conquest, every
+mission claim, and every profile view (`tier_name`) — a short-TTL process-local
+cache avoids re-querying it on each of those calls.
 """
 
 from __future__ import annotations
+
+import time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,26 +28,43 @@ DEFAULT_LADDER: list[tuple[int, str, int, float | None]] = [
     (5, "전설의 빵 정복자", 12000, 0.70),
 ]
 
+_CACHE_TTL_SECONDS = 60
+_ladder_cache: list[tuple[int, str, int, float | None]] | None = None
+_ladder_cached_at = 0.0
+
+
+def invalidate_cache() -> None:
+    global _ladder_cache, _ladder_cached_at
+    _ladder_cache = None
+    _ladder_cached_at = 0.0
+
 
 async def _ladder(db: AsyncSession) -> list[tuple[int, str, int, float | None]]:
-    rows = (
-        (await db.execute(select(TierPolicy).order_by(TierPolicy.tier_level)))
-        .scalars()
-        .all()
-    )
-    if not rows:
-        return DEFAULT_LADDER
-    return [
-        (
-            r.tier_level,
-            r.tier_name,
-            r.required_exp,
-            float(r.gold_ratio_requirement)
-            if r.gold_ratio_requirement is not None
-            else None,
+    global _ladder_cache, _ladder_cached_at
+    now = time.monotonic()
+    if _ladder_cache is None or (now - _ladder_cached_at) > _CACHE_TTL_SECONDS:
+        rows = (
+            (await db.execute(select(TierPolicy).order_by(TierPolicy.tier_level)))
+            .scalars()
+            .all()
         )
-        for r in rows
-    ]
+        _ladder_cache = (
+            DEFAULT_LADDER
+            if not rows
+            else [
+                (
+                    r.tier_level,
+                    r.tier_name,
+                    r.required_exp,
+                    float(r.gold_ratio_requirement)
+                    if r.gold_ratio_requirement is not None
+                    else None,
+                )
+                for r in rows
+            ]
+        )
+        _ladder_cached_at = now
+    return _ladder_cache
 
 
 def _gold_ratio(stat: UserStat) -> float:

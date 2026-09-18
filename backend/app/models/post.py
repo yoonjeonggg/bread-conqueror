@@ -65,7 +65,6 @@ class Comment(Base):
 
     post: Mapped[Post] = relationship(back_populates="comments")
 
-
 class PostLike(Base):
     __tablename__ = "post_likes"
     __table_args__ = (

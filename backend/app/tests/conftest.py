@@ -58,6 +58,17 @@ def _anyio_backend() -> str:
     return "asyncio"
 
 
+@pytest.fixture(autouse=True)
+def _reset_policy_and_tier_cache():
+    """policy_service/tier_service 는 프로세스 전역 캐시를 쓴다. 각 테스트는
+    자체 in-memory DB 를 쓰므로, 이전 테스트가 채운 캐시가 새지 않도록
+    매 테스트 시작 전에 비운다."""
+    from app.services import policy_service, tier_service
+
+    policy_service.invalidate_cache()
+    tier_service.invalidate_cache()
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _reset_redis_pool():
     """각 테스트는 자체 이벤트 루프를 쓴다. 모듈 전역 redis 클라이언트의

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import FlagType, MissionMetric
@@ -86,6 +86,47 @@ async def _progress(
     return (await db.execute(stmt)).scalar_one() or 0
 
 
+async def _all_progress(
+    db: AsyncSession, user_id: int, since: datetime
+) -> dict[MissionMetric, int]:
+    """`_progress` 를 미션 정의 수만큼 반복 호출하지 않고, Flag/Review 각각
+    한 번의 집계 쿼리로 모든 지표를 한 번에 계산한다."""
+    flag_row = (
+        await db.execute(
+            select(
+                func.count().label("total"),
+                func.sum(case((Flag.type == FlagType.GOLD, 1), else_=0)).label(
+                    "gold"
+                ),
+                func.sum(case((Flag.type == FlagType.SILVER, 1), else_=0)).label(
+                    "silver"
+                ),
+                func.count(func.distinct(Flag.store_id)).label("stores"),
+                func.count(func.distinct(Store.region_sido)).label("regions"),
+            )
+            .select_from(Flag)
+            .join(Store, Store.id == Flag.store_id)
+            .where(Flag.user_id == user_id, Flag.created_at >= since)
+        )
+    ).one()
+    review_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Review)
+            .where(Review.user_id == user_id, Review.created_at >= since)
+        )
+    ).scalar_one()
+
+    return {
+        MissionMetric.TOTAL_FLAGS: flag_row.total or 0,
+        MissionMetric.GOLD_FLAGS: int(flag_row.gold or 0),
+        MissionMetric.SILVER_FLAGS: int(flag_row.silver or 0),
+        MissionMetric.DISTINCT_STORES: flag_row.stores or 0,
+        MissionMetric.DISTINCT_REGIONS: flag_row.regions or 0,
+        MissionMetric.REVIEWS: review_count or 0,
+    }
+
+
 async def weekly_missions(
     db: AsyncSession, user_id: int
 ) -> tuple[date, list[MissionView]]:
@@ -115,10 +156,11 @@ async def weekly_missions(
         .scalars()
         .all()
     )
+    progress_by_metric = await _all_progress(db, user_id, since)
 
     views: list[MissionView] = []
     for d in defs:
-        raw = await _progress(db, user_id, d.metric, since)
+        raw = progress_by_metric.get(d.metric, 0)
         views.append(
             MissionView(
                 code=d.code,
