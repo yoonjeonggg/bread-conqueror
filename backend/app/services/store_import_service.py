@@ -71,6 +71,7 @@ async def import_stores(
         for lat, lng in (await db.execute(select(Store.lat, Store.lng))).all()
     ]
     batch: list[tuple[float, float]] = []
+    pending: list[tuple[RowResult, Store]] = []
 
     for line, raw in enumerate(reader, start=2):  # 헤더가 1행
         if result.total >= MAX_ROWS:
@@ -131,7 +132,13 @@ async def import_stores(
         )
         store.stat = StoreStat()
         db.add(store)
+        row_result = RowResult(line, name, "created", None, None)
+        result.rows.append(row_result)
+        pending.append((row_result, store))
+
+    if pending:
         await db.flush()
-        result.rows.append(RowResult(line, name, "created", None, store.id))
+        for row_result, store in pending:
+            row_result.store_id = store.id
 
     return result

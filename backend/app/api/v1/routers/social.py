@@ -1,7 +1,7 @@
 """팔로우 (F-RANK-03 친구 랭킹의 기반) + 신고 (F-CONQ-10, F-BOARD-03)."""
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import CurrentUser, DbSession, OptionalUser
@@ -58,16 +58,20 @@ async def unfollow(user_id: int, db: DbSession, me: CurrentUser) -> None:
 async def follow_counts(
     user_id: int, db: DbSession, me: OptionalUser
 ) -> FollowCounts:
-    followers = (
+    counts = (
         await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.followee_id == user_id)
+            select(
+                func.count(case((Follow.followee_id == user_id, 1))).label(
+                    "followers"
+                ),
+                func.count(case((Follow.follower_id == user_id, 1))).label(
+                    "following"
+                ),
+            ).where(
+                (Follow.followee_id == user_id) | (Follow.follower_id == user_id)
+            )
         )
-    ).scalar_one()
-    following = (
-        await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.follower_id == user_id)
-        )
-    ).scalar_one()
+    ).one()
     is_following = False
     if me is not None:
         is_following = (
@@ -78,7 +82,9 @@ async def follow_counts(
             )
         ).scalar_one_or_none() is not None
     return FollowCounts(
-        followers=followers, following=following, is_following=is_following
+        followers=counts.followers or 0,
+        following=counts.following or 0,
+        is_following=is_following,
     )
 
 

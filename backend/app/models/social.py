@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     String,
     UniqueConstraint,
     func,
@@ -23,6 +24,7 @@ class Follow(Base):
         UniqueConstraint(
             "follower_id", "followee_id", name="uq_follows_follower_followee"
         ),
+        Index("idx_follows_followee", "followee_id"),
     )
 
     id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)

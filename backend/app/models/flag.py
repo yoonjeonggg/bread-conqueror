@@ -31,6 +31,7 @@ class Flag(Base):
     __table_args__ = (
         Index("idx_flags_user_store", "user_id", "store_id"),
         Index("idx_flags_store_type", "store_id", "type"),
+        Index("idx_flags_user_created", "user_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
