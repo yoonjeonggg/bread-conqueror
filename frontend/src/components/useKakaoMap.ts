@@ -9,10 +9,6 @@ export interface KakaoMap {
   setLevel(level: number): void;
 }
 
-export interface KakaoMarker {
-  setMap(map: KakaoMap | null): void;
-}
-
 export interface KakaoCustomOverlay {
   setMap(map: KakaoMap | null): void;
 }
@@ -23,10 +19,6 @@ interface KakaoMapsNS {
     container: HTMLElement,
     options: { center: KakaoLatLng; level: number },
   ) => KakaoMap;
-  Marker: new (options: {
-    position: KakaoLatLng;
-    map?: KakaoMap;
-  }) => KakaoMarker;
   CustomOverlay: new (options: {
     position: KakaoLatLng;
     content: HTMLElement | string;
@@ -34,9 +26,6 @@ interface KakaoMapsNS {
     yAnchor?: number;
     zIndex?: number;
   }) => KakaoCustomOverlay;
-  event: {
-    addListener(target: unknown, type: string, handler: () => void): void;
-  };
   load(callback: () => void): void;
 }
 

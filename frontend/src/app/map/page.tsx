@@ -7,11 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { StoreCard } from "@/components/StoreCard";
 import { useGeolocation, DEFAULT_COORDS } from "@/components/useGeolocation";
-import {
-  useKakaoMaps,
-  type KakaoCustomOverlay,
-  type KakaoMap,
-} from "@/components/useKakaoMap";
+import { useKakaoMaps, type KakaoMap } from "@/components/useKakaoMap";
 import { api, ApiError } from "@/lib/api";
 import type { Store } from "@/lib/types";
 
@@ -54,17 +50,24 @@ export default function MapPage() {
 
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
-  const overlaysRef = useRef<KakaoCustomOverlay[]>([]);
 
   useEffect(() => {
     if (!coords) return;
+    let ignore = false;
     setStatus(null);
     api
       .nearbyStores(coords.lat, coords.lng, radius)
-      .then(setStores)
-      .catch((e) =>
-        setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다."),
-      );
+      .then((data) => {
+        if (!ignore) setStores(data);
+      })
+      .catch((e) => {
+        if (!ignore) {
+          setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다.");
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, [coords, radius]);
 
   const c = coords ?? DEFAULT_COORDS;
@@ -86,18 +89,21 @@ export default function MapPage() {
     mapRef.current.setLevel(LEVEL_BY_RADIUS[radius] ?? 7);
   }, [maps, c.lat, c.lng, radius]);
 
-  // rebuild markers when the store list changes
+  // rebuild markers when the store list changes; cleanup tears down the
+  // previous batch both on re-run (new stores) and on unmount.
   useEffect(() => {
     if (!maps || !mapRef.current) return;
-    overlaysRef.current.forEach((o) => o.setMap(null));
-    overlaysRef.current = stores.map((store) => {
+    const overlays = stores.map((store) => {
       return new maps.CustomOverlay({
         position: new maps.LatLng(store.lat, store.lng),
         content: buildPinContent(store),
         yAnchor: 1,
       });
     });
-    overlaysRef.current.forEach((o) => o.setMap(mapRef.current));
+    overlays.forEach((o) => o.setMap(mapRef.current));
+    return () => {
+      overlays.forEach((o) => o.setMap(null));
+    };
   }, [maps, stores]);
 
   // event delegation: Kakao clones overlay content nodes internally, so a
