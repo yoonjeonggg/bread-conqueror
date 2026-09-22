@@ -43,6 +43,7 @@ interface Options {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  signal?: AbortSignal;
 }
 
 async function request<T>(path: string, opts: Options = {}): Promise<T> {
@@ -57,6 +58,7 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     cache: "no-store",
+    signal: opts.signal,
   });
 
   if (res.status === 204) return undefined as T;
@@ -89,10 +91,15 @@ export const api = {
 
   profile: (userId: number) => request<Profile>(`/users/${userId}`),
 
-  nearbyStores: (lat: number, lng: number, radiusM = 3000) =>
+  nearbyStores: (
+    lat: number,
+    lng: number,
+    radiusM = 3000,
+    signal?: AbortSignal,
+  ) =>
     request<Store[]>(
       `/stores?lat=${lat}&lng=${lng}&radius_m=${radiusM}&limit=100`,
-      { auth: true },
+      { auth: true, signal },
     ),
 
   store: (id: number) => request<Store>(`/stores/${id}`),

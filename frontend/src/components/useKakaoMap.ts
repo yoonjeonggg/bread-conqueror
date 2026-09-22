@@ -11,6 +11,8 @@ export interface KakaoMap {
 
 export interface KakaoCustomOverlay {
   setMap(map: KakaoMap | null): void;
+  setPosition(latlng: KakaoLatLng): void;
+  setContent(content: HTMLElement | string): void;
 }
 
 interface KakaoMapsNS {

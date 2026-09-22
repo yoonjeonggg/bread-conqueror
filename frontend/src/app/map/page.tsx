@@ -7,7 +7,11 @@ import { useRouter } from "next/navigation";
 
 import { StoreCard } from "@/components/StoreCard";
 import { useGeolocation, DEFAULT_COORDS } from "@/components/useGeolocation";
-import { useKakaoMaps, type KakaoMap } from "@/components/useKakaoMap";
+import {
+  useKakaoMaps,
+  type KakaoCustomOverlay,
+  type KakaoMap,
+} from "@/components/useKakaoMap";
 import { api, ApiError } from "@/lib/api";
 import type { Store } from "@/lib/types";
 
@@ -16,6 +20,22 @@ const LEVEL_BY_RADIUS: Record<number, number> = {
   3000: 7,
   8000: 9,
 };
+
+function levelForRadius(radius: number): number {
+  return LEVEL_BY_RADIUS[radius] ?? 7;
+}
+
+// captures everything a pin renders, so unchanged stores can skip
+// touching the DOM/overlay when the list is re-diffed
+function pinSignature(store: Store): string {
+  return [
+    store.lat,
+    store.lng,
+    store.stat?.gold_flag_count ?? 0,
+    store.stat?.silver_flag_count ?? 0,
+    !!store.conquered_by_me,
+  ].join("|");
+}
 
 function buildPinContent(store: Store): HTMLDivElement {
   const conquered = !!store.conquered_by_me;
@@ -53,21 +73,18 @@ export default function MapPage() {
 
   useEffect(() => {
     if (!coords) return;
-    let ignore = false;
+    const controller = new AbortController();
     setStatus(null);
     api
-      .nearbyStores(coords.lat, coords.lng, radius)
-      .then((data) => {
-        if (!ignore) setStores(data);
-      })
+      .nearbyStores(coords.lat, coords.lng, radius, controller.signal)
+      .then((data) => setStores(data))
       .catch((e) => {
-        if (!ignore) {
-          setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다.");
-        }
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다.");
       });
-    return () => {
-      ignore = true;
-    };
+    // cancels the in-flight request (not just its result) when radius/coords
+    // change again before it resolves, instead of letting it complete unused
+    return () => controller.abort();
   }, [coords, radius]);
 
   const c = coords ?? DEFAULT_COORDS;
@@ -77,7 +94,7 @@ export default function MapPage() {
     if (!maps || !mapDivRef.current || mapRef.current) return;
     mapRef.current = new maps.Map(mapDivRef.current, {
       center: new maps.LatLng(c.lat, c.lng),
-      level: LEVEL_BY_RADIUS[radius] ?? 7,
+      level: levelForRadius(radius),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maps]);
@@ -86,25 +103,57 @@ export default function MapPage() {
   useEffect(() => {
     if (!maps || !mapRef.current) return;
     mapRef.current.setCenter(new maps.LatLng(c.lat, c.lng));
-    mapRef.current.setLevel(LEVEL_BY_RADIUS[radius] ?? 7);
+    mapRef.current.setLevel(levelForRadius(radius));
   }, [maps, c.lat, c.lng, radius]);
 
-  // rebuild markers when the store list changes; cleanup tears down the
-  // previous batch both on re-run (new stores) and on unmount.
+  // reconcile markers against the previous batch instead of tearing every
+  // pin down and rebuilding it: stores whose position/flags/conquest are
+  // unchanged (the common case when toggling radius back and forth) keep
+  // their existing overlay untouched, avoiding needless DOM churn.
+  const overlaysRef = useRef(new Map<number, { overlay: KakaoCustomOverlay; sig: string }>());
+
   useEffect(() => {
     if (!maps || !mapRef.current) return;
-    const overlays = stores.map((store) => {
-      return new maps.CustomOverlay({
-        position: new maps.LatLng(store.lat, store.lng),
-        content: buildPinContent(store),
-        yAnchor: 1,
-      });
-    });
-    overlays.forEach((o) => o.setMap(mapRef.current));
-    return () => {
-      overlays.forEach((o) => o.setMap(null));
-    };
+    const map = mapRef.current;
+    const live = overlaysRef.current;
+    const seen = new Set<number>();
+
+    for (const store of stores) {
+      seen.add(store.id);
+      const sig = pinSignature(store);
+      const entry = live.get(store.id);
+      if (!entry) {
+        const overlay = new maps.CustomOverlay({
+          position: new maps.LatLng(store.lat, store.lng),
+          content: buildPinContent(store),
+          yAnchor: 1,
+        });
+        overlay.setMap(map);
+        live.set(store.id, { overlay, sig });
+      } else if (entry.sig !== sig) {
+        entry.overlay.setPosition(new maps.LatLng(store.lat, store.lng));
+        entry.overlay.setContent(buildPinContent(store));
+        entry.sig = sig;
+      }
+    }
+
+    for (const [id, entry] of live) {
+      if (!seen.has(id)) {
+        entry.overlay.setMap(null);
+        live.delete(id);
+      }
+    }
   }, [maps, stores]);
+
+  // tear every remaining pin down on unmount only (reconciliation above
+  // already removes pins for stores that drop out of the list)
+  useEffect(() => {
+    const overlays = overlaysRef.current;
+    return () => {
+      overlays.forEach(({ overlay }) => overlay.setMap(null));
+      overlays.clear();
+    };
+  }, []);
 
   // event delegation: Kakao clones overlay content nodes internally, so a
   // listener attached directly to a pin is silently dropped. data-store-id
