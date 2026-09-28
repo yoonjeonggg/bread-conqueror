@@ -11,6 +11,7 @@ import { ReviewSection } from "@/components/ReviewSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Flag as FlagRecord, Store as StoreRecord } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 export default function StoreDetailPage() {
   const params = useParams<{ id: string }>();
@@ -123,7 +124,7 @@ export default function StoreDetailPage() {
             <div className="row" style={{ justifyContent: "space-between" }}>
               <FlagBadge type={f.type} />
               <span className="muted" style={{ fontSize: 12 }}>
-                {new Date(f.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(f.created_at)}
                 {f.upgraded_from_silver ? " · 업그레이드" : ""}
               </span>
             </div>

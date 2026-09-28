@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { QrToken, Store } from "@/lib/types";
+import { formatDateTime } from "@/lib/format";
 
 function conquestUrl(token: string): string {
   const origin =
@@ -18,8 +19,7 @@ function conquestUrl(token: string): string {
 export default function StoreManagePage() {
   const params = useParams<{ id: string }>();
   const storeId = Number(params.id);
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useRequireAuth();
 
   const [store, setStore] = useState<Store | null>(null);
   const [tokens, setTokens] = useState<QrToken[]>([]);
@@ -34,9 +34,6 @@ export default function StoreManagePage() {
     api.storeQrTokens(storeId).then(setTokens).catch(() => setTokens([]));
   }, [storeId]);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     api.store(storeId).then(setStore).catch(() => setStore(null));
@@ -191,7 +188,7 @@ export default function StoreManagePage() {
                   사용 {t.use_count}
                   {t.max_uses != null ? ` / ${t.max_uses}` : ""} 회
                   {t.expires_at
-                    ? ` · 만료 ${new Date(t.expires_at).toLocaleString("ko-KR")}`
+                    ? ` · 만료 ${formatDateTime(t.expires_at)}`
                     : ""}
                 </div>
                 <div className="row" style={{ gap: 8, marginTop: 8 }}>

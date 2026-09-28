@@ -275,15 +275,21 @@ a.card:hover {
   color: var(--ink);
 }
 
-.field input {
+.field input,
+.field textarea,
+.input {
   border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
+  font-family: inherit;
   background: var(--surface);
+  color: var(--ink);
 }
 
-.field input:focus {
+.field input:focus,
+.field textarea:focus,
+.input:focus {
   outline: none;
   border-color: var(--ink);
 }

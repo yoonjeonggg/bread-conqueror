@@ -6,7 +6,7 @@ import { Flame, Heart, Search, Target } from "lucide-react";
 
 import { StoreCard } from "@/components/StoreCard";
 import { TierBadge } from "@/components/badges";
-import { DEFAULT_COORDS, useGeolocation } from "@/components/useGeolocation";
+import { useGeolocation } from "@/components/useGeolocation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Post, Store } from "@/lib/types";
@@ -22,10 +22,18 @@ export default function HomePage() {
     total: number;
   } | null>(null);
 
+  // posts don't depend on location — fetch once instead of on every coords change
   useEffect(() => {
-    const c = coords ?? DEFAULT_COORDS;
+    api.posts().then(setPosts).catch(() => setPosts([]));
+  }, []);
+
+  // wait for geolocation to settle (it falls back to DEFAULT_COORDS on denial)
+  // instead of querying the default spot first and the real one right after
+  useEffect(() => {
+    if (!coords) return;
+    const controller = new AbortController();
     api
-      .nearbyStores(c.lat, c.lng, 8000)
+      .nearbyStores(coords.lat, coords.lng, 8000, controller.signal)
       .then((rows) => {
         const sorted = [...rows].sort(
           (a, b) =>
@@ -33,8 +41,10 @@ export default function HomePage() {
         );
         setPopular(sorted.slice(0, 5));
       })
-      .catch(() => setPopular([]));
-    api.posts().then(setPosts).catch(() => setPosts([]));
+      .catch(() => {
+        if (!controller.signal.aborted) setPopular([]);
+      });
+    return () => controller.abort();
   }, [coords]);
 
   useEffect(() => {

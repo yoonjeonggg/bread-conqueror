@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { WeeklyMission } from "@/lib/types";
 
 export default function MissionsPage() {
-  const router = useRouter();
-  const { user, loading, refresh } = useAuth();
+  const { user, refresh } = useRequireAuth();
   const [missions, setMissions] = useState<WeeklyMission[]>([]);
   const [weekStart, setWeekStart] = useState("");
   const [ready, setReady] = useState(false);
@@ -28,9 +26,6 @@ export default function MissionsPage() {
       .finally(() => setReady(true));
   }, []);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login?next=/missions");
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (user) load();

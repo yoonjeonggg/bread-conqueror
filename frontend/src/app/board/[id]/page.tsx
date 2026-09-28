@@ -9,6 +9,7 @@ import { ReportButton } from "@/components/ReportButton";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Comment, Post } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 export default function PostDetailPage() {
   const params = useParams<{ id: string }>();
@@ -21,6 +22,8 @@ export default function PostDetailPage() {
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [missing, setMissing] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const loadComments = () =>
     api.postComments(postId).then(setComments).catch(() => setComments([]));
@@ -66,7 +69,7 @@ export default function PostDetailPage() {
             티어 Lv.{post.author_tier_snapshot}
           </span>{" "}
           깃발 {post.author_flag_count_snapshot} ·{" "}
-          {new Date(post.created_at).toLocaleDateString("ko-KR")}
+          {formatDate(post.created_at)}
         </div>
         <p style={{ whiteSpace: "pre-wrap", marginTop: 12, fontSize: 15 }}>
           {post.content}
@@ -105,31 +108,38 @@ export default function PostDetailPage() {
         <div className="card">
           <div className="row" style={{ gap: 8 }}>
             <input
+              className="input"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="댓글 달기"
               maxLength={500}
-              style={{
-                flex: 1,
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                padding: 10,
-                fontSize: 14,
-              }}
+              style={{ flex: 1 }}
             />
             <button
               className="btn btn-secondary"
               style={{ width: "auto", padding: "10px 14px" }}
-              disabled={text.trim().length === 0}
+              disabled={sending || text.trim().length === 0}
               onClick={async () => {
-                await api.addComment(postId, text.trim());
-                setText("");
-                await loadComments();
+                setSending(true);
+                setCommentError(null);
+                try {
+                  await api.addComment(postId, text.trim());
+                  setText("");
+                  await loadComments();
+                } catch (e) {
+                  // keep the typed text so the user can retry
+                  setCommentError(
+                    e instanceof ApiError ? e.message : "댓글 등록에 실패했습니다.",
+                  );
+                } finally {
+                  setSending(false);
+                }
               }}
             >
               등록
             </button>
           </div>
+          {commentError && <p className="error-text">{commentError}</p>}
         </div>
       )}
 
@@ -138,7 +148,7 @@ export default function PostDetailPage() {
           <p style={{ fontSize: 14, margin: 0 }}>{c.content}</p>
           <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
             사용자 {c.user_id} ·{" "}
-            {new Date(c.created_at).toLocaleDateString("ko-KR")}
+            {formatDate(c.created_at)}
           </div>
         </div>
       ))}

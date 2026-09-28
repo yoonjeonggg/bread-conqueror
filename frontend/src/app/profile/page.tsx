@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Heart, Target, TriangleAlert, Wrench } from "lucide-react";
 
 import { FlagBadge, FlagMark, TierBadge } from "@/components/badges";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { Flag, StoreClaim } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 const CLAIM_LABEL: Record<string, string> = {
   PENDING: "심사 중",
@@ -17,14 +17,10 @@ const CLAIM_LABEL: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const { user, logout } = useRequireAuth();
   const [flags, setFlags] = useState<Flag[]>([]);
   const [claims, setClaims] = useState<StoreClaim[]>([]);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (user) {
@@ -158,7 +154,7 @@ export default function ProfilePage() {
               {f.type === "GOLD" ? "골드" : "실버"} · +{f.exp_granted} EXP
             </FlagBadge>
             <span className="muted" style={{ fontSize: 12 }}>
-              {new Date(f.created_at).toLocaleDateString("ko-KR")}
+              {formatDate(f.created_at)}
               {f.is_flagged && (
                 <span
                   className="inline-ico"

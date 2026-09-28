@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, Camera, ChevronLeft, Flag, MapPin, TrendingUp, TriangleAlert } from "lucide-react";
 
 import { FlagMark } from "@/components/badges";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { ConquestResponse, Store } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 type Mode = "GOLD" | "SILVER";
 
 export default function ConquerPage() {
   const params = useParams<{ storeId: string }>();
   const storeId = Number(params.storeId);
-  const router = useRouter();
-  const { user, loading, refresh } = useAuth();
+  const { refresh } = useRequireAuth();
   const { coords, error: geoError } = useGeolocation();
 
   const [store, setStore] = useState<Store | null>(null);
@@ -54,9 +54,6 @@ export default function ConquerPage() {
     }
   }
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     api.store(storeId).then(setStore).catch(() => setStore(null));
@@ -243,7 +240,7 @@ export default function ConquerPage() {
           >
             EXIF 신뢰도 {exif.trust}
             {exif.captured_at
-              ? ` · 촬영 ${new Date(exif.captured_at).toLocaleDateString("ko-KR")}`
+              ? ` · 촬영 ${formatDate(exif.captured_at)}`
               : ""}
             {exif.has_gps ? " · GPS 포함" : ""}
           </div>

@@ -47,7 +47,10 @@ interface Options {
 }
 
 async function request<T>(path: string, opts: Options = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // Content-Type only when there is a body: on a bodyless GET it just turns a
+  // "simple" cross-origin request into one that needs a CORS preflight.
+  const headers: Record<string, string> = {};
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.auth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;

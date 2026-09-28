@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BadgeCheck } from "lucide-react";
 
 import { StoreCard } from "@/components/StoreCard";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Store } from "@/lib/types";
 
 type Sort = "popular" | "rating" | "recent";
@@ -30,6 +30,10 @@ export default function SearchPage() {
   const [items, setItems] = useState<Store[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // filters auto-search on change, so responses can arrive out of order; only
+  // the latest request may write results
+  const latestRun = useRef(0);
 
   useEffect(() => {
     api.storeFilters().then(setFilters).catch(() => {});
@@ -37,7 +41,9 @@ export default function SearchPage() {
 
   const run = useCallback(
     async (offset: number) => {
+      const runId = ++latestRun.current;
       setLoading(true);
+      setError(null);
       try {
         const res = await api.searchStores({
           q: q.trim() || undefined,
@@ -48,12 +54,16 @@ export default function SearchPage() {
           limit: PAGE,
           offset,
         });
+        if (runId !== latestRun.current) return;
         setTotal(res.total);
         setItems((prev) =>
           offset === 0 ? res.items : [...prev, ...res.items],
         );
+      } catch (e) {
+        if (runId !== latestRun.current) return;
+        setError(e instanceof ApiError ? e.message : "검색에 실패했습니다.");
       } finally {
-        setLoading(false);
+        if (runId === latestRun.current) setLoading(false);
       }
     },
     [q, region, category, verified, sort],
@@ -146,7 +156,8 @@ export default function SearchPage() {
       <div className="section-title">
         결과 {total}곳
       </div>
-      {!loading && items.length === 0 ? (
+      {error && <div className="card list-empty">{error}</div>}
+      {!loading && !error && items.length === 0 ? (
         <div className="card list-empty">조건에 맞는 매장이 없습니다.</div>
       ) : (
         items.map((s) => <StoreCard key={s.id} store={s} />)

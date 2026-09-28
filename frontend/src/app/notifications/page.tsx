@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BadgeCheck, Ban, Bell, Flag, Heart, type LucideIcon, MessageCircle, QrCode, TrendingUp, TriangleAlert, UserPlus } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { AppNotification, NotificationType } from "@/lib/types";
+import { timeAgo } from "@/lib/format";
 
 const ICON: Record<NotificationType, LucideIcon> = {
   FOLLOW: UserPlus,
@@ -36,25 +36,11 @@ function hrefFor(n: AppNotification): string | null {
   }
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "방금";
-  if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
-}
-
 export default function NotificationsPage() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useRequireAuth();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login?next=/notifications");
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (!user) return;

@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { Store } from "@/lib/types";
 
 export default function StoreClaimPage() {
   const params = useParams<{ id: string }>();
   const storeId = Number(params.id);
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  useRequireAuth();
 
   const [store, setStore] = useState<Store | null>(null);
   const [licenseUrl, setLicenseUrl] = useState("");
@@ -22,9 +21,6 @@ export default function StoreClaimPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     api.store(storeId).then(setStore).catch(() => setStore(null));

@@ -8,6 +8,7 @@ import { ChevronLeft, ExternalLink, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AdminClaim } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -115,7 +116,7 @@ export default function AdminPage() {
                 {r.target_type} #{r.target_id}
               </span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(r.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(r.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 14, margin: "8px 0" }}>{r.reason}</p>
@@ -154,7 +155,7 @@ export default function AdminPage() {
             <div className="row" style={{ justifyContent: "space-between" }}>
               <span className="badge badge-gold">{c.store_name}</span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(c.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(c.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 13, margin: "8px 0 4px" }}>

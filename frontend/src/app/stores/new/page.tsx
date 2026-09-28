@@ -7,11 +7,11 @@ import { ChevronLeft, MapPin } from "lucide-react";
 
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 
 export default function NewStorePage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useRequireAuth();
   const { coords, locate } = useGeolocation();
 
   const [name, setName] = useState("");
@@ -20,10 +20,6 @@ export default function NewStorePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!loading && !user) {
-    router.replace("/login");
-    return null;
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +44,8 @@ export default function NewStorePage() {
       setBusy(false);
     }
   }
+
+  if (!user) return null;
 
   return (
     <div className="page">
