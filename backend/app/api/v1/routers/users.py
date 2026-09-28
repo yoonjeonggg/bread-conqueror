@@ -11,13 +11,13 @@ from app.services import ranking_service, tier_service
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-async def _profile(db: DbSession, user: User) -> ProfileOut:
+async def _profile(db: DbSession, user: User, *, is_self: bool) -> ProfileOut:
     stat = await db.get(UserStat, user.id) or UserStat(user_id=user.id)
     rank = await ranking_service.get_rank(redis_client, user.id)
     return ProfileOut(
         id=user.id,
         nickname=user.nickname,
-        email=user.email,
+        email=user.email if is_self else None,
         profile_image_url=user.profile_image_url,
         role=user.role,
         stat=UserStatOut.model_validate(stat),
@@ -28,7 +28,7 @@ async def _profile(db: DbSession, user: User) -> ProfileOut:
 
 @router.get("/me", response_model=ProfileOut)
 async def my_profile(db: DbSession, user: CurrentUser) -> ProfileOut:
-    return await _profile(db, user)
+    return await _profile(db, user, is_self=True)
 
 
 @router.get("/{user_id}", response_model=ProfileOut)
@@ -42,4 +42,4 @@ async def public_profile(user_id: int, db: DbSession) -> ProfileOut:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다."
         )
-    return await _profile(db, user)
+    return await _profile(db, user, is_self=False)

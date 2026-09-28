@@ -4,7 +4,8 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentUser, DbSession
@@ -13,52 +14,45 @@ from app.models.enums import EvidenceType, FlagType, NotificationType, StoreStat
 from app.models.flag import Flag
 from app.models.store import Store
 from app.models.store_qr_token import StoreQrToken
-from app.models.user import UserStat
+from app.models.user import User, UserStat
 from app.schemas.claim import QrConquerRequest
 from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
 from app.services import flag_service, notification_service, ranking_service
 from app.utils.exif import extract
 
-
-def _tier_up_message(level: int) -> str:
-    return f"축하합니다! 티어가 Lv.{level}(으)로 상승했습니다."
-
 router = APIRouter(prefix="/flags", tags=["flags"])
 
+# ~10MB image once base64-encoded (+ data-URL prefix). Anything bigger is not a
+# phone photo; refuse it before decoding/parsing rather than after.
+MAX_EXIF_IMAGE_B64 = 14_000_000
 
-@router.post("", response_model=ConquestResponse, status_code=status.HTTP_201_CREATED)
-async def create_flag(
-    payload: FlagCreate, db: DbSession, user: CurrentUser
-) -> ConquestResponse:
+
+async def _active_store(db: AsyncSession, store_id: int) -> Store:
     store = (
         await db.execute(
-            select(Store)
-            .options(selectinload(Store.stat))
-            .where(Store.id == payload.store_id)
+            select(Store).options(selectinload(Store.stat)).where(Store.id == store_id)
         )
     ).scalar_one_or_none()
     if store is None or store.status == StoreStatus.CLOSED:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
         )
+    return store
 
-    result = await flag_service.create_flag(
-        db,
-        user=user,
-        store=store,
-        flag_type=payload.type,
-        lat=payload.lat,
-        lng=payload.lng,
-        evidence_type=payload.evidence_type,
-        evidence_image_url=payload.evidence_image_url,
-        visited_at=payload.visited_at,
-    )
+
+async def _finish_conquest(
+    db: AsyncSession,
+    user: User,
+    store: Store,
+    result: flag_service.ConquestResult,
+) -> ConquestResponse:
+    """Shared tail of GPS and QR conquests: tier-up notice, commit, ranking."""
     if result.tier_changed:
         await notification_service.create(
             db,
             recipient_id=user.id,
             type=NotificationType.TIER_UP,
-            message=_tier_up_message(result.new_tier_level),
+            message=f"축하합니다! 티어가 Lv.{result.new_tier_level}(으)로 상승했습니다.",
             target_type="USER",
             target_id=user.id,
         )
@@ -80,6 +74,26 @@ async def create_flag(
         is_flagged=result.is_flagged,
         abuse_reasons=result.abuse_reasons,
     )
+
+
+@router.post("", response_model=ConquestResponse, status_code=status.HTTP_201_CREATED)
+async def create_flag(
+    payload: FlagCreate, db: DbSession, user: CurrentUser
+) -> ConquestResponse:
+    store = await _active_store(db, payload.store_id)
+
+    result = await flag_service.create_flag(
+        db,
+        user=user,
+        store=store,
+        flag_type=payload.type,
+        lat=payload.lat,
+        lng=payload.lng,
+        evidence_type=payload.evidence_type,
+        evidence_image_url=payload.evidence_image_url,
+        visited_at=payload.visited_at,
+    )
+    return await _finish_conquest(db, user, store, result)
 
 
 @router.post("/qr", response_model=ConquestResponse, status_code=status.HTTP_201_CREATED)
@@ -96,23 +110,32 @@ async def conquer_by_qr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="유효하지 않은 QR입니다."
         )
+    gone = HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="만료되었거나 사용 한도에 도달한 QR입니다.",
+    )
     if not token.is_active(datetime.utcnow()):
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="만료되었거나 사용 한도에 도달한 QR입니다.",
-        )
+        raise gone
 
-    store = (
-        await db.execute(
-            select(Store)
-            .options(selectinload(Store.stat))
-            .where(Store.id == token.store_id)
+    # consume one use atomically: a read-then-increment lets two simultaneous
+    # scans both pass the max_uses check. If the flag below fails, the request
+    # rolls back and the use is returned.
+    consumed = await db.execute(
+        update(StoreQrToken)
+        .where(
+            StoreQrToken.id == token.id,
+            or_(
+                StoreQrToken.max_uses.is_(None),
+                StoreQrToken.use_count < StoreQrToken.max_uses,
+            ),
         )
-    ).scalar_one_or_none()
-    if store is None or store.status == StoreStatus.CLOSED:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
-        )
+        .values(use_count=StoreQrToken.use_count + 1)
+        .execution_options(synchronize_session=False)
+    )
+    if consumed.rowcount != 1:
+        raise gone
+
+    store = await _active_store(db, token.store_id)
 
     result = await flag_service.create_flag(
         db,
@@ -126,17 +149,6 @@ async def conquer_by_qr(
         visited_at=None,
         via_qr=True,
     )
-    token.use_count += 1
-
-    if result.tier_changed:
-        await notification_service.create(
-            db,
-            recipient_id=user.id,
-            type=NotificationType.TIER_UP,
-            message=_tier_up_message(result.new_tier_level),
-            target_type="USER",
-            target_id=user.id,
-        )
     if store.owner_id is not None:
         await notification_service.create(
             db,
@@ -147,25 +159,7 @@ async def conquer_by_qr(
             target_type="STORE",
             target_id=store.id,
         )
-
-    await db.commit()
-    await db.refresh(result.flag)
-
-    user_stat = await db.get(UserStat, user.id)
-    if user_stat is not None:
-        await ranking_service.set_score(
-            redis_client, user.id, user_stat.exp, store.region_sido
-        )
-
-    return ConquestResponse(
-        flag=FlagOut.model_validate(result.flag),
-        exp_granted=result.exp_granted,
-        tier_changed=result.tier_changed,
-        new_tier_level=result.new_tier_level,
-        upgraded_from_silver=result.upgraded_from_silver,
-        is_flagged=result.is_flagged,
-        abuse_reasons=result.abuse_reasons,
-    )
+    return await _finish_conquest(db, user, store, result)
 
 
 @router.get("/me", response_model=list[FlagOut])
@@ -184,7 +178,7 @@ async def my_flags(db: DbSession, user: CurrentUser) -> list[Flag]:
 
 
 class ExifPreviewRequest(BaseModel):
-    image_base64: str = Field(min_length=1)
+    image_base64: str = Field(min_length=1, max_length=MAX_EXIF_IMAGE_B64)
 
 
 class ExifPreviewResponse(BaseModel):

@@ -3,8 +3,9 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.models.enums import ContentStatus, NotificationType
@@ -21,6 +22,21 @@ from app.services import notification_service
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
+LIKE_ESCAPE = "\\"
+
+
+def _escape_like(term: str) -> str:
+    # user input is a literal search term, not a LIKE pattern
+    return term.replace(LIKE_ESCAPE, LIKE_ESCAPE * 2).replace("%", r"\%").replace("_", r"\_")
+
+
+async def _published_post(db: AsyncSession, post_id: int) -> Post:
+    post = await db.get(Post, post_id)
+    if post is None or post.status != ContentStatus.PUBLISHED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return post
+
+
 @router.get("", response_model=list[PostOut])
 async def list_posts(
     db: DbSession,
@@ -32,8 +48,13 @@ async def list_posts(
 ) -> list[Post]:
     stmt = select(Post).where(Post.status == ContentStatus.PUBLISHED)
     if q and q.strip():
-        like = f"%{q.strip()}%"
-        stmt = stmt.where(or_(Post.title.ilike(like), Post.content.ilike(like)))
+        like = f"%{_escape_like(q.strip())}%"
+        stmt = stmt.where(
+            or_(
+                Post.title.ilike(like, escape=LIKE_ESCAPE),
+                Post.content.ilike(like, escape=LIKE_ESCAPE),
+            )
+        )
     if store_id is not None:
         stmt = stmt.where(Post.store_id == store_id)
     order = Post.like_count.desc() if sort == "popular" else Post.created_at.desc()
@@ -64,10 +85,7 @@ async def create_post(
 
 @router.get("/{post_id}", response_model=PostOut)
 async def get_post(post_id: int, db: DbSession) -> Post:
-    post = await db.get(Post, post_id)
-    if post is None or post.status != ContentStatus.PUBLISHED:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return post
+    return await _published_post(db, post_id)
 
 
 @router.get("/{post_id}/comments", response_model=list[CommentOut])
@@ -90,11 +108,23 @@ async def list_comments(post_id: int, db: DbSession) -> list[Comment]:
 
 @router.post("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
-    post = await db.get(Post, post_id)
-    if post is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    post = await _published_post(db, post_id)
     db.add(PostLike(post_id=post_id, user_id=user.id))
-    post.like_count += 1
+    try:
+        # flush the like first so a duplicate fails here, before any side effects
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 좋아요한 글입니다."
+        ) from exc
+    # increment in SQL: `post.like_count += 1` loses likes that land concurrently
+    await db.execute(
+        update(Post)
+        .where(Post.id == post_id)
+        .values(like_count=Post.like_count + 1)
+        .execution_options(synchronize_session=False)
+    )
     await notification_service.create(
         db,
         recipient_id=post.user_id,
@@ -104,13 +134,7 @@ async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
         target_type="POST",
         target_id=post_id,
     )
-    try:
-        await db.commit()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="이미 좋아요한 글입니다."
-        ) from exc
+    await db.commit()
 
 
 @router.post(
@@ -121,9 +145,7 @@ async def like_post(post_id: int, db: DbSession, user: CurrentUser) -> None:
 async def add_comment(
     post_id: int, payload: CommentCreate, db: DbSession, user: CurrentUser
 ) -> Comment:
-    post = await db.get(Post, post_id)
-    if post is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    post = await _published_post(db, post_id)
     comment = Comment(post_id=post_id, user_id=user.id, content=payload.content)
     db.add(comment)
     await notification_service.create(

@@ -1,7 +1,7 @@
 """팔로우 (F-RANK-03 친구 랭킹의 기반) + 신고 (F-CONQ-10, F-BOARD-03)."""
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import CurrentUser, DbSession, OptionalUser
@@ -102,6 +102,22 @@ async def following_list(user_id: int, db: DbSession) -> list[FollowUser]:
 async def create_report(
     payload: ReportCreate, db: DbSession, me: CurrentUser
 ) -> Report:
+    # one open report per reporter per target — repeats would only inflate
+    # report_count and bury the moderation queue
+    already = (
+        await db.execute(
+            select(Report.id).where(
+                Report.reporter_id == me.id,
+                Report.target_type == payload.target_type,
+                Report.target_id == payload.target_id,
+            )
+        )
+    ).first()
+    if already is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 신고한 대상입니다."
+        )
+
     report = Report(
         reporter_id=me.id,
         target_type=payload.target_type,
@@ -113,7 +129,12 @@ async def create_report(
     if payload.target_type is ReportTargetType.POST:
         post = await db.get(Post, payload.target_id)
         if post is not None:
-            post.report_count += 1
+            await db.execute(
+                update(Post)
+                .where(Post.id == post.id)
+                .values(report_count=Post.report_count + 1)
+                .execution_options(synchronize_session=False)
+            )
 
     await db.commit()
     await db.refresh(report)
