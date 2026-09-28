@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -37,8 +38,9 @@ export default function NewPostPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="link-accent">
-          ← 게시판
+        <Link href="/board" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          게시판
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           빵집 추천 글쓰기

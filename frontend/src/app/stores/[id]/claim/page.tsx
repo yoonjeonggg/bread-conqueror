@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -72,8 +73,9 @@ export default function StoreClaimPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 매장
+        <Link href={`/stores/${storeId}`} className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          매장
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           매장 소유권 신청

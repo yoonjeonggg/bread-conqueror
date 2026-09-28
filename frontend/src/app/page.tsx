@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Flame, Heart, Search, Target } from "lucide-react";
 
 import { StoreCard } from "@/components/StoreCard";
 import { TierBadge } from "@/components/badges";
@@ -56,10 +57,11 @@ export default function HomePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🥐 Bread Conqueror</div>
+        <div className="page-title">Bread Conqueror</div>
         <div className="row" style={{ gap: 12 }}>
           <Link href="/search" className="link-accent">
-            🔍 검색
+            <Search size={18} strokeWidth={2.5} />
+            검색
           </Link>
           {!loading && !user && (
             <Link href="/login" className="link-accent">
@@ -71,16 +73,13 @@ export default function HomePage() {
 
       {user ? (
         <div className="hero">
-          <div className="muted" style={{ color: "#f8e9d6", fontSize: 13 }}>
-            {user.nickname} 님
+          <div className="hero-sub">{user.nickname} 님</div>
+          <div className="big">
+            <span className="accent">{user.stat.exp}</span> EXP
           </div>
-          <div className="big">EXP {user.stat.exp}</div>
           <div className="row" style={{ marginTop: 10, gap: 8 }}>
             <TierBadge level={user.stat.tier_level} />
-            <span
-              className="badge"
-              style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}
-            >
+            <span className="badge badge-on-dark">
               전국 {user.national_rank ? `${user.national_rank}위` : "순위권 밖"}
             </span>
           </div>
@@ -102,7 +101,7 @@ export default function HomePage() {
       ) : (
         <div className="hero">
           <div className="big">전국 빵집을 정복하세요</div>
-          <p style={{ color: "#f8e9d6", fontSize: 14, margin: "8px 0 14px" }}>
+          <p className="hero-sub" style={{ fontSize: 14, margin: "8px 0 14px" }}>
             방문하고 깃발을 꽂으면 경험치와 티어가 올라갑니다.
           </p>
           <Link href="/signup">
@@ -114,13 +113,16 @@ export default function HomePage() {
       {missionInfo && (
         <Link href="/missions" className="card" style={{ display: "block", marginTop: 14 }}>
           <div className="row" style={{ justifyContent: "space-between" }}>
-            <strong style={{ fontSize: 15 }}>🎯 이번 주 미션</strong>
+            <strong className="inline-ico" style={{ fontSize: 15, gap: 6 }}>
+              <Target size={18} strokeWidth={2.5} color="var(--accent)" />
+              이번 주 미션
+            </strong>
             {missionInfo.claimable > 0 ? (
-              <span className="badge badge-gold">
+              <span className="badge badge-accent">
                 보상 {missionInfo.claimable}개 대기
               </span>
             ) : (
-              <span className="badge badge-silver">
+              <span className="badge badge-dark">
                 {missionInfo.done}/{missionInfo.total} 완료
               </span>
             )}
@@ -128,7 +130,10 @@ export default function HomePage() {
         </Link>
       )}
 
-      <div className="section-title">🔥 이번 주 인기 정복지</div>
+      <div className="section-title inline-ico" style={{ gap: 6 }}>
+        <Flame size={18} strokeWidth={2.5} color="var(--accent)" />
+        이번 주 인기 정복지
+      </div>
       {popular.length === 0 ? (
         <div className="card list-empty">
           주변 빵집 데이터를 불러오는 중입니다.
@@ -137,7 +142,7 @@ export default function HomePage() {
         popular.map((s) => <StoreCard key={s.id} store={s} />)
       )}
 
-      <div className="section-title">📝 추천 게시글</div>
+      <div className="section-title">추천 게시글</div>
       {posts.length === 0 ? (
         <div className="card list-empty">아직 추천 게시글이 없습니다.</div>
       ) : (
@@ -149,7 +154,8 @@ export default function HomePage() {
             </p>
             <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
               작성자 티어 Lv.{p.author_tier_snapshot} · 깃발{" "}
-              {p.author_flag_count_snapshot}개 · ♥ {p.like_count}
+              {p.author_flag_count_snapshot}개 ·{" "}
+              <Heart size={12} style={{ verticalAlign: -1 }} /> {p.like_count}
             </div>
           </div>
         ))

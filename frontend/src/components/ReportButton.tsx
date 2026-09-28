@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Siren } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -32,15 +33,11 @@ export function ReportButton({
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="muted"
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 12,
-        }}
+        className="muted text-btn"
+        style={{ fontSize: 12 }}
       >
-        🚩 {label}
+        <Siren size={12} strokeWidth={2.25} />
+        {label}
       </button>
       {open && (
         <div className="card" style={{ marginTop: 8 }}>

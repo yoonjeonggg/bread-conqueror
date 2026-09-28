@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChevronLeft, MapPin } from "lucide-react";
 
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
@@ -51,8 +52,9 @@ export default function NewStorePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="link-accent">
-          ← 지도
+        <Link href="/map" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          지도
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           신규 매장 등록
@@ -99,8 +101,8 @@ export default function NewStorePage() {
           className="row"
           style={{ justifyContent: "space-between", fontSize: 12 }}
         >
-          <span className="muted">
-            📍{" "}
+          <span className="muted inline-ico">
+            <MapPin size={13} />
             {coords
               ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
               : "위치 확인 중…"}

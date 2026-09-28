@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Heart, Target, TriangleAlert, Wrench } from "lucide-react";
 
-import { TierBadge } from "@/components/badges";
+import { FlagBadge, FlagMark, TierBadge } from "@/components/badges";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Flag, StoreClaim } from "@/lib/types";
@@ -58,14 +59,11 @@ export default function ProfilePage() {
         <div className="big">{user.nickname}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <TierBadge level={st.tier_level} />
-          <span
-            className="badge"
-            style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}
-          >
+          <span className="badge badge-on-dark">
             {user.tier_name}
           </span>
         </div>
-        <p style={{ color: "#f8e9d6", fontSize: 13, marginTop: 10 }}>
+        <p className="hero-sub" style={{ marginTop: 10 }}>
           EXP {st.exp} · 전국{" "}
           {user.national_rank ? `${user.national_rank}위` : "순위권 밖"}
         </p>
@@ -74,11 +72,11 @@ export default function ProfilePage() {
       <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="card">
           <div className="num">{st.gold_flag_count}</div>
-          <div className="lbl">🥇 골드</div>
+          <div className="lbl"><FlagMark type="GOLD" size={12} />골드</div>
         </div>
         <div className="card">
           <div className="num">{st.silver_flag_count}</div>
-          <div className="lbl">🥈 실버</div>
+          <div className="lbl"><FlagMark type="SILVER" size={12} />실버</div>
         </div>
         <div className="card">
           <div className="num">{st.conquered_store_count}</div>
@@ -90,7 +88,7 @@ export default function ProfilePage() {
         </div>
         <div className="card">
           <div className="num">{st.received_like_count}</div>
-          <div className="lbl">받은 ♥</div>
+          <div className="lbl"><Heart size={12} />받은 좋아요</div>
         </div>
         <div className="card">
           <div className="num">
@@ -102,14 +100,16 @@ export default function ProfilePage() {
 
       <Link href="/missions">
         <button className="btn btn-secondary" style={{ marginTop: 16 }}>
-          🎯 이번 주 미션
+          <Target size={18} strokeWidth={2.5} />
+          이번 주 미션
         </button>
       </Link>
 
       {user.role === "ADMIN" && (
         <Link href="/admin">
-          <button className="btn btn-secondary" style={{ marginTop: 10 }}>
-            🛠️ 관리자 대시보드
+          <button className="btn btn-ghost" style={{ marginTop: 10 }}>
+            <Wrench size={18} strokeWidth={2.5} />
+            관리자 대시보드
           </button>
         </Link>
       )}
@@ -131,7 +131,7 @@ export default function ProfilePage() {
                   c.status === "APPROVED"
                     ? "badge-verified"
                     : c.status === "REJECTED"
-                      ? "badge-silver"
+                      ? "badge-dark"
                       : "badge-gold"
                 }`}
               >
@@ -154,14 +154,20 @@ export default function ProfilePage() {
             className="card row"
             style={{ justifyContent: "space-between", display: "flex" }}
           >
-            <span
-              className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}
-            >
-              {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"} · +{f.exp_granted} EXP
-            </span>
+            <FlagBadge type={f.type}>
+              {f.type === "GOLD" ? "골드" : "실버"} · +{f.exp_granted} EXP
+            </FlagBadge>
             <span className="muted" style={{ fontSize: 12 }}>
               {new Date(f.created_at).toLocaleDateString("ko-KR")}
-              {f.is_flagged ? " · ⚠️검토중" : ""}
+              {f.is_flagged && (
+                <span
+                  className="inline-ico"
+                  style={{ color: "var(--danger)", marginLeft: 6 }}
+                >
+                  <TriangleAlert size={12} strokeWidth={2.5} />
+                  검토중
+                </span>
+              )}
             </span>
           </Link>
         ))

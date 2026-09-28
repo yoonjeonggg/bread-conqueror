@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { BadgeCheck } from "lucide-react";
 
 import { StoreCard } from "@/components/StoreCard";
 import { api } from "@/lib/api";
@@ -67,7 +68,7 @@ export default function SearchPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🔍 매장 검색</div>
+        <div className="page-title">매장 검색</div>
         <Link href="/map" className="link-accent">
           지도
         </Link>
@@ -124,7 +125,7 @@ export default function SearchPage() {
             ))}
           </select>
           <label
-            className={`badge ${verified ? "badge-verified" : "badge-silver"}`}
+            className={`badge ${verified ? "badge-verified" : "badge-outline"}`}
             style={{ cursor: "pointer" }}
           >
             <input
@@ -133,7 +134,8 @@ export default function SearchPage() {
               onChange={(e) => setVerified(e.target.checked)}
               style={{ display: "none" }}
             />
-            ✅ 인증 매장만
+            <BadgeCheck size={12} strokeWidth={2.5} />
+            인증 매장만
           </label>
         </div>
         <button className="btn btn-primary" style={{ marginTop: 12 }}>

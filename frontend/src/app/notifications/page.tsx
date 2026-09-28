@@ -3,21 +3,22 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BadgeCheck, Ban, Bell, Flag, Heart, type LucideIcon, MessageCircle, QrCode, TrendingUp, TriangleAlert, UserPlus } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AppNotification, NotificationType } from "@/lib/types";
 
-const ICON: Record<NotificationType, string> = {
-  FOLLOW: "👤",
-  POST_COMMENT: "💬",
-  POST_LIKE: "❤️",
-  CLAIM_APPROVED: "✅",
-  CLAIM_REJECTED: "🚫",
-  TIER_UP: "🎉",
-  FLAG_APPROVED: "🥇",
-  FLAG_INVALIDATED: "⚠️",
-  QR_CONQUEST: "🚩",
+const ICON: Record<NotificationType, LucideIcon> = {
+  FOLLOW: UserPlus,
+  POST_COMMENT: MessageCircle,
+  POST_LIKE: Heart,
+  CLAIM_APPROVED: BadgeCheck,
+  CLAIM_REJECTED: Ban,
+  TIER_UP: TrendingUp,
+  FLAG_APPROVED: Flag,
+  FLAG_INVALIDATED: TriangleAlert,
+  QR_CONQUEST: QrCode,
 };
 
 function hrefFor(n: AppNotification): string | null {
@@ -74,7 +75,7 @@ export default function NotificationsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🔔 알림</div>
+        <div className="page-title">알림</div>
         {unreadCount > 0 && (
           <button
             className="link-accent"
@@ -96,9 +97,12 @@ export default function NotificationsPage() {
       ) : (
         items.map((n) => {
           const href = hrefFor(n);
+          const Icon = ICON[n.type] ?? Bell;
           const body = (
             <div className={`card notif-item ${n.is_read ? "" : "unread"}`}>
-              <span className="notif-dot">{ICON[n.type] ?? "🔔"}</span>
+              <span className="notif-ico">
+                <Icon size={18} strokeWidth={2.25} />
+              </span>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 14, margin: 0 }}>{n.message}</p>
                 <span className="muted" style={{ fontSize: 12 }}>

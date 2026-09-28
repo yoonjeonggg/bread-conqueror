@@ -3,20 +3,21 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft, Flag, Store } from "lucide-react";
 
-import { FlagCount, VerifiedBadge } from "@/components/badges";
+import { FlagBadge, FlagCount, VerifiedBadge } from "@/components/badges";
 import { ReportButton } from "@/components/ReportButton";
 import { ReviewSection } from "@/components/ReviewSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Flag, Store } from "@/lib/types";
+import type { Flag as FlagRecord, Store as StoreRecord } from "@/lib/types";
 
 export default function StoreDetailPage() {
   const params = useParams<{ id: string }>();
   const storeId = Number(params.id);
   const { user } = useAuth();
-  const [store, setStore] = useState<Store | null>(null);
-  const [flags, setFlags] = useState<Flag[]>([]);
+  const [store, setStore] = useState<StoreRecord | null>(null);
+  const [flags, setFlags] = useState<FlagRecord[]>([]);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -43,8 +44,9 @@ export default function StoreDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="link-accent">
-          ← 지도
+        <Link href="/map" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          지도
         </Link>
       </div>
 
@@ -82,7 +84,8 @@ export default function StoreDetailPage() {
       {user ? (
         <Link href={`/conquer/${store.id}`}>
           <button className="btn btn-primary" style={{ marginTop: 16 }}>
-            🚩 방문 인증하고 정복하기
+            <Flag size={18} strokeWidth={2.5} fill="currentColor" />
+            방문 인증하고 정복하기
           </button>
         </Link>
       ) : (
@@ -96,7 +99,8 @@ export default function StoreDetailPage() {
       {user && store.owner_id === user.id && (
         <Link href={`/stores/${store.id}/manage`}>
           <button className="btn btn-secondary" style={{ marginTop: 10 }}>
-            🏪 매장 관리 · QR 발급
+            <Store size={18} strokeWidth={2.5} />
+            매장 관리 · QR 발급
           </button>
         </Link>
       )}
@@ -117,11 +121,7 @@ export default function StoreDetailPage() {
         flags.slice(0, 20).map((f) => (
           <div key={f.id} className="card">
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <span
-                className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}
-              >
-                {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"}
-              </span>
+              <FlagBadge type={f.type} />
               <span className="muted" style={{ fontSize: 12 }}>
                 {new Date(f.created_at).toLocaleDateString("ko-KR")}
                 {f.upgraded_from_silver ? " · 업그레이드" : ""}

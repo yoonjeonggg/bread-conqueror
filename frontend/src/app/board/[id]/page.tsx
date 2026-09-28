@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft, Heart } from "lucide-react";
 
 import { ReportButton } from "@/components/ReportButton";
 import { api, ApiError } from "@/lib/api";
@@ -52,8 +53,9 @@ export default function PostDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="link-accent">
-          ← 게시판
+        <Link href="/board" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          게시판
         </Link>
       </div>
 
@@ -85,7 +87,13 @@ export default function PostDetailPage() {
               }
             }}
           >
-            ♥ {likes}
+            <Heart
+              size={16}
+              strokeWidth={2.5}
+              color="var(--accent)"
+              fill={liked ? "var(--accent)" : "none"}
+            />
+            {likes}
           </button>
           <ReportButton targetType="POST" targetId={postId} label="글 신고" />
         </div>

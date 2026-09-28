@@ -1,24 +1,24 @@
 :root {
-  /* Brand — from 요구사항 명세서 §3.2 */
-  --bread-brown: #c68642;
-  --bread-brown-dark: #a56a2f;
-  --warm-beige: #f8f1e5;
-  --cream-white: #fffdf8;
-  --gold: #e8b923;
-  --gold-soft: #f6e4a8;
-  --silver: #b9c0c9;
-  --silver-soft: #e3e7ec;
-  --orange: #f2762e;
-  --ink: #2b2118;
-  --ink-soft: #6b5d4d;
-  --line: #ece2d2;
-  --danger: #d9463e;
-  --ok: #2f9e6b;
+  /* Brand — high-contrast neutrals + one loud accent */
+  --accent: #ff5a1f;
+  --accent-dark: #e0470e;
+  --accent-tint: #fff0e8;
+  --ink: #111111;
+  --ink-soft: #6b6b6b;
+  --ink-faint: #a3a3a3;
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --line: #e5e5e5;
 
-  --radius: 16px;
+  --gold: #ffb800;
+  --gold-ink: #1f1600;
+  --silver: #8792a2;
+  --silver-ink: #ffffff;
+  --ok: #00a656;
+  --danger: #e5261f;
+
+  --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 2px 14px rgba(80, 55, 20, 0.08);
-  --shadow-lg: 0 10px 34px rgba(80, 55, 20, 0.14);
   --maxw: 480px;
 }
 
@@ -33,11 +33,12 @@ body {
 }
 
 body {
-  background: var(--warm-beige);
+  background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, -apple-system,
+    BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -49,11 +50,15 @@ button {
   font-family: inherit;
 }
 
+svg {
+  flex-shrink: 0;
+}
+
 .app-shell {
   max-width: var(--maxw);
   margin: 0 auto;
   min-height: 100vh;
-  background: var(--warm-beige);
+  background: var(--bg);
   padding-bottom: 76px;
   position: relative;
 }
@@ -64,22 +69,23 @@ button {
 
 .page-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .section-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--ink);
-  margin: 22px 0 10px;
+  margin: 26px 0 10px;
+  letter-spacing: -0.02em;
 }
 
 .muted {
@@ -87,15 +93,22 @@ button {
 }
 
 .card {
-  background: var(--cream-white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: 16px;
 }
 
+a.card {
+  transition: border-color 0.12s ease;
+}
+
+a.card:hover {
+  border-color: var(--ink);
+}
+
 .card + .card {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .row {
@@ -110,6 +123,12 @@ button {
   gap: 4px;
 }
 
+.inline-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -117,7 +136,7 @@ button {
   gap: 8px;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 13px 18px;
+  padding: 14px 18px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -130,49 +149,117 @@ button {
 }
 
 .btn-primary {
-  background: var(--orange);
+  background: var(--accent);
   color: #fff;
 }
 
+.btn-primary:hover {
+  background: var(--accent-dark);
+}
+
 .btn-secondary {
-  background: var(--bread-brown);
+  background: var(--ink);
   color: #fff;
 }
 
 .btn-ghost {
-  background: transparent;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
   color: var(--ink);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 9px;
-  border-radius: 999px;
+  padding: 4px 9px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .badge-gold {
-  background: var(--gold-soft);
-  color: #8a6a05;
+  background: var(--gold);
+  color: var(--gold-ink);
 }
 
 .badge-silver {
-  background: var(--silver-soft);
-  color: #59636e;
+  background: var(--silver);
+  color: var(--silver-ink);
 }
 
 .badge-verified {
-  background: #e6f4ec;
-  color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+
+.badge-accent {
+  background: var(--accent);
+  color: #fff;
+}
+
+.badge-dark {
+  background: var(--ink);
+  color: #fff;
+}
+
+.badge-outline {
+  background: transparent;
+  border: 1.5px solid currentColor;
+  padding: 3px 8px;
+}
+
+/* segmented tabs (radius, ranking scope, conquest mode …) */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #e6e6e6;
+  border-radius: 12px;
+}
+
+.tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .field {
@@ -184,21 +271,21 @@ button {
 
 .field label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-soft);
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .field input {
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
-  background: var(--cream-white);
+  background: var(--surface);
 }
 
 .field input:focus {
-  outline: 2px solid var(--gold-soft);
-  border-color: var(--bread-brown);
+  outline: none;
+  border-color: var(--ink);
 }
 
 .mission-bar {
@@ -210,57 +297,89 @@ button {
 
 .mission-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--gold), var(--orange));
+  background: var(--accent);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
 
 .search-select {
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   font-size: 13px;
-  background: var(--cream-white);
+  background: var(--surface);
   color: var(--ink);
 }
 
 .error-text {
   color: var(--danger);
   font-size: 13px;
+  font-weight: 600;
   margin-top: 4px;
 }
 
 .hero {
-  background: linear-gradient(135deg, var(--bread-brown), var(--bread-brown-dark));
+  background: var(--ink);
   color: #fff;
   border-radius: var(--radius);
   padding: 20px;
-  box-shadow: var(--shadow-lg);
 }
 
 .hero .big {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.hero .big .accent {
+  color: var(--accent);
+}
+
+.hero-sub {
+  color: #bdbdbd;
+  font-size: 13px;
+}
+
+.hero .stat-grid .card {
+  background: #1f1f1f;
+  border-color: #2e2e2e;
+  color: #fff;
+}
+
+.hero .stat-grid .lbl {
+  color: #a3a3a3;
+}
+
+.badge-on-dark {
+  background: #2e2e2e;
+  color: #fff;
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .stat-grid .card {
   padding: 12px;
   text-align: center;
+  margin: 0;
 }
 
 .stat-grid .num {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .stat-grid .lbl {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink-soft);
 }
 
@@ -271,7 +390,7 @@ button {
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--maxw);
-  background: var(--cream-white);
+  background: var(--surface);
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: space-around;
@@ -283,30 +402,36 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   font-size: 11px;
-  color: var(--ink-soft);
-  padding: 4px 12px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  padding: 4px 10px;
 }
 
 .bottom-nav a.active {
-  color: var(--orange);
-  font-weight: 700;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.bottom-nav a.active .ico {
+  color: var(--accent);
 }
 
 .bottom-nav .ico {
-  font-size: 19px;
+  position: relative;
+  display: inline-flex;
 }
 
 .nav-badge {
   position: absolute;
   top: -6px;
-  left: 12px;
+  left: 14px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--danger);
+  background: var(--accent);
   color: #fff;
   font-size: 10px;
   font-weight: 800;
@@ -321,12 +446,18 @@ button {
 }
 
 .notif-item.unread {
-  border-left: 3px solid var(--orange);
+  border-left: 3px solid var(--accent);
 }
 
-.notif-dot {
-  font-size: 20px;
-  line-height: 1;
+.notif-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
 }
 
 .list-empty {
@@ -353,7 +484,6 @@ button {
   font-size: 13px;
   font-weight: 600;
   z-index: 100;
-  box-shadow: var(--shadow-lg);
 }
 
 .conquer-celebrate {
@@ -362,27 +492,51 @@ button {
 }
 
 .conquer-celebrate .flag {
-  font-size: 72px;
-  animation: pop 0.5s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 112px;
+  height: 112px;
+  border-radius: 28px;
+  background: var(--ink);
+  animation: pop 0.45s ease;
+}
+
+.conquer-celebrate .flag.wide {
+  width: auto;
+  padding: 0 24px;
 }
 
 @keyframes pop {
   0% {
-    transform: scale(0.2) rotate(-20deg);
+    transform: scale(0.4);
     opacity: 0;
   }
   70% {
-    transform: scale(1.15) rotate(6deg);
+    transform: scale(1.08);
   }
   100% {
-    transform: scale(1) rotate(0);
+    transform: scale(1);
     opacity: 1;
   }
 }
 
 .link-accent {
-  color: var(--bread-brown);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
   font-weight: 700;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .divider {
@@ -395,13 +549,132 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 
+.rank-row:last-child {
+  border-bottom: none;
+}
+
 .rank-row .no {
-  width: 26px;
+  width: 28px;
   font-weight: 800;
-  color: var(--bread-brown);
+  font-size: 16px;
+  color: var(--ink);
   text-align: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+/* ─── /map ─────────────────────────────────────────────── */
+.map-frame {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #e6e6e6;
+  border: 1px solid var(--line);
+}
+
+.map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.map-locate {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.map-loading {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Kakao clones overlay content, so pins are styled by class (a clone keeps
+   its classes) rather than by per-node listeners or inline state. */
+.map-pin {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.map-pin-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.map-pin-tip {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid var(--ink);
+  margin-top: -1px;
+}
+
+.map-pin.mine .map-pin-body {
+  background: var(--accent);
+}
+
+.map-pin.mine .map-pin-tip {
+  border-top-color: var(--accent);
+}
+
+.map-pin-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.map-pin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.map-pin-dot.gold {
+  background: var(--gold);
+}
+
+.map-pin-dot.silver {
+  background: #c3cad3;
 }
