@@ -53,6 +53,7 @@ function buildPinContent(store: Store): HTMLDivElement {
   if (!pinTemplate) {
     pinTemplate = document.createElement("div");
     pinTemplate.className = "map-pin";
+    // static markup only — store data is written via textContent/dataset below
     pinTemplate.innerHTML =
       '<div class="map-pin-body">' +
       '<span class="map-pin-count"><i class="map-pin-dot gold"></i><b></b></span>' +
@@ -171,7 +172,9 @@ export default function MapPage() {
       const pin = (e.target as HTMLElement).closest<HTMLElement>(
         "[data-store-id]",
       );
-      if (pin?.dataset.storeId) router.push(`/stores/${pin.dataset.storeId}`);
+      const id = pin?.dataset.storeId;
+      // only ever navigate to a numeric store route, whatever ends up in the DOM
+      if (id && /^\d+$/.test(id)) router.push(`/stores/${id}`);
     };
     el.addEventListener("pointerdown", onDown, true);
     el.addEventListener("click", onClick);

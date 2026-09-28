@@ -61,7 +61,9 @@ function loadKakaoMaps(appKey: string): Promise<KakaoMapsNS> {
     }
     const script = document.createElement("script");
     script.id = SCRIPT_ID;
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+    // explicit https (a protocol-relative URL would follow the page's scheme)
+    // and an encoded key so a malformed env value can't inject extra params
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;
     script.async = true;
     script.onload = onReady;
     script.onerror = () =>
