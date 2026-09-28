@@ -1,3 +1,4 @@
+import math
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -30,6 +31,13 @@ async def list_nearby(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[StoreListItem]:
     min_lat, max_lat, min_lng, max_lng = bounding_box(lat, lng, radius_m)
+    # order by an equirectangular distance proxy *before* LIMIT so dense areas
+    # can't truncate away the nearest stores; exact haversine is applied below.
+    # The small overshoot covers bbox corners that fall outside the radius.
+    lng_scale = math.cos(math.radians(lat))
+    approx_dist_sq = (Store.lat - lat) * (Store.lat - lat) + (
+        (Store.lng - lng) * lng_scale
+    ) * ((Store.lng - lng) * lng_scale)
     rows = (
         (
             await db.execute(
@@ -40,7 +48,8 @@ async def list_nearby(
                     Store.lat.between(min_lat, max_lat),
                     Store.lng.between(min_lng, max_lng),
                 )
-                .limit(limit * 3)
+                .order_by(approx_dist_sq)
+                .limit(limit + 10)
             )
         )
         .scalars()
