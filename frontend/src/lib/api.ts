@@ -96,9 +96,10 @@ export const api = {
     lng: number,
     radiusM = 3000,
     signal?: AbortSignal,
+    limit = 100,
   ) =>
     request<Store[]>(
-      `/stores?lat=${lat}&lng=${lng}&radius_m=${radiusM}&limit=100`,
+      `/stores?lat=${lat}&lng=${lng}&radius_m=${radiusM}&limit=${limit}`,
       { auth: true, signal },
     ),
 
