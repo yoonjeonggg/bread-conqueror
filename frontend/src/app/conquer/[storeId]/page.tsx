@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ArrowRight, Camera, ChevronLeft, Flag, MapPin, TrendingUp, TriangleAlert } from "lucide-react";
 
+import { FlagMark } from "@/components/badges";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { ConquestResponse, Store } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 type Mode = "GOLD" | "SILVER";
 
 export default function ConquerPage() {
   const params = useParams<{ storeId: string }>();
   const storeId = Number(params.storeId);
-  const router = useRouter();
-  const { user, loading, refresh } = useAuth();
+  const { refresh } = useRequireAuth();
   const { coords, error: geoError } = useGeolocation();
 
   const [store, setStore] = useState<Store | null>(null);
@@ -52,9 +54,6 @@ export default function ConquerPage() {
     }
   }
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     api.store(storeId).then(setStore).catch(() => setStore(null));
@@ -91,8 +90,17 @@ export default function ConquerPage() {
     return (
       <div className="page">
         <div className="conquer-celebrate">
-          <div className="flag">
-            {result.upgraded_from_silver ? "🥈➜🥇" : mode === "GOLD" ? "🥇" : "🥈"}
+          <div className={`flag ${result.upgraded_from_silver ? "wide" : ""}`}>
+            {result.upgraded_from_silver && (
+              <>
+                <FlagMark type="SILVER" size={44} />
+                <ArrowRight size={28} color="#fff" strokeWidth={2.5} />
+              </>
+            )}
+            <FlagMark
+              type={result.upgraded_from_silver ? "GOLD" : mode}
+              size={56}
+            />
           </div>
           <h2 style={{ margin: "12px 0 4px" }}>
             {result.upgraded_from_silver ? "골드로 업그레이드!" : "정복 완료!"}
@@ -103,13 +111,22 @@ export default function ConquerPage() {
           <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
             <div className="big">+{result.exp_granted} EXP</div>
             {result.tier_changed && (
-              <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-                🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
+              <p
+                className="hero-sub inline-ico"
+                style={{ margin: "8px 0 0", fontSize: 14 }}
+              >
+                <TrendingUp size={16} color="var(--accent)" strokeWidth={2.5} />
+                티어가 Lv.{result.new_tier_level}로 상승했습니다!
               </p>
             )}
             {result.is_flagged && (
-              <p style={{ color: "#ffd9d0", margin: "8px 0 0", fontSize: 13 }}>
-                ⚠️ 이상 패턴이 감지되어 검토 대기 상태입니다.
+              <p style={{ color: "#ff8a80", margin: "8px 0 0", fontSize: 13 }}>
+                <TriangleAlert
+                  size={14}
+                  strokeWidth={2.5}
+                  style={{ verticalAlign: -2, marginRight: 4 }}
+                />
+                이상 패턴이 감지되어 검토 대기 상태입니다.
                 {result.abuse_reasons.map((r) => (
                   <span key={r}> {r}.</span>
                 ))}
@@ -132,8 +149,9 @@ export default function ConquerPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 취소
+        <Link href={`/stores/${storeId}`} className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          취소
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           정복하기
@@ -150,20 +168,20 @@ export default function ConquerPage() {
       )}
 
       <div className="section-title">인증 방식</div>
-      <div className="pill-row">
+      <div className="tabs">
         <button
-          className={`badge ${mode === "GOLD" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab ${mode === "GOLD" ? "active" : ""}`}
           onClick={() => setMode("GOLD")}
         >
-          🥇 실시간 (GPS+사진)
+          <FlagMark type="GOLD" />
+          실시간 (GPS+사진)
         </button>
         <button
-          className={`badge ${mode === "SILVER" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab ${mode === "SILVER" ? "active" : ""}`}
           onClick={() => setMode("SILVER")}
         >
-          🥈 과거 방문 등록
+          <FlagMark type="SILVER" />
+          과거 방문 등록
         </button>
       </div>
 
@@ -171,7 +189,10 @@ export default function ConquerPage() {
         {mode === "GOLD" ? (
           <>
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <span>📍 현재 위치</span>
+              <span className="inline-ico" style={{ fontWeight: 700 }}>
+                <MapPin size={16} strokeWidth={2.5} />
+                현재 위치
+              </span>
               <span className="muted" style={{ fontSize: 12 }}>
                 {coords
                   ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
@@ -196,7 +217,8 @@ export default function ConquerPage() {
           className="btn btn-ghost"
           style={{ marginTop: 12, cursor: "pointer" }}
         >
-          {photoName ? `📷 ${photoName}` : "📷 사진 첨부"}
+          <Camera size={18} strokeWidth={2.25} />
+          {photoName ?? "사진 첨부"}
           <input
             type="file"
             accept="image/*"
@@ -212,13 +234,13 @@ export default function ConquerPage() {
                 ? "badge-verified"
                 : exif.trust === "MEDIUM"
                   ? "badge-gold"
-                  : "badge-silver"
+                  : "badge-dark"
             }`}
             style={{ marginTop: 10 }}
           >
             EXIF 신뢰도 {exif.trust}
             {exif.captured_at
-              ? ` · 촬영 ${new Date(exif.captured_at).toLocaleDateString("ko-KR")}`
+              ? ` · 촬영 ${formatDate(exif.captured_at)}`
               : ""}
             {exif.has_gps ? " · GPS 포함" : ""}
           </div>
@@ -233,7 +255,14 @@ export default function ConquerPage() {
         disabled={submitting || (mode === "GOLD" && !coords)}
         onClick={submit}
       >
-        {submitting ? "정복 중…" : "🚩 깃발 꽂기"}
+        {submitting ? (
+          "정복 중…"
+        ) : (
+          <>
+            <Flag size={18} strokeWidth={2.5} fill="currentColor" />
+            깃발 꽂기
+          </>
+        )}
       </button>
     </div>
   );

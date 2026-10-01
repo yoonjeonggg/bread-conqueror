@@ -3,10 +3,9 @@ from sqlalchemy import select
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.models.review import Review
-from app.models.store import Store
 from app.models.user import User, UserStat
 from app.schemas.review import ReviewCreate, ReviewOut, ReviewWithAuthor
-from app.services import review_service
+from app.services import review_service, store_service
 
 router = APIRouter(tags=["reviews"])
 
@@ -45,10 +44,7 @@ async def list_reviews(store_id: int, db: DbSession) -> list[ReviewWithAuthor]:
 async def upsert_review(
     store_id: int, payload: ReviewCreate, db: DbSession, user: CurrentUser
 ) -> Review:
-    if await db.get(Store, store_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
-        )
+    await store_service.get_open_store(db, store_id)
 
     review = (
         await db.execute(

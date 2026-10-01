@@ -6,7 +6,10 @@ from app.models.enums import ClaimStatus
 
 
 class ClaimCreate(BaseModel):
-    business_license_image_url: str = Field(min_length=1, max_length=500)
+    # rendered as a link in the admin console — only http(s), never javascript:/data:
+    business_license_image_url: str = Field(
+        min_length=1, max_length=500, pattern=r"^https?://[^\s]+$"
+    )
     contact_phone: str = Field(min_length=8, max_length=20, pattern=r"^[0-9+\-]+$")
 
 

@@ -219,19 +219,24 @@ async def create_flag(
     ).scalar_one()
     first_conquest_here = prior_here == 0
 
-    # Silver -> Gold upgrade: promote an existing valid silver flag at this store.
+    # Silver -> Gold upgrade: the user's first gold here promotes their silver.
+    # Only the *first* gold counts — the silver row stays in history, so without
+    # the gold check every later gold (after cooldown) would "upgrade" it again
+    # and keep decrementing silver counts that belong to other stores.
     upgraded = False
     if flag_type is FlagType.GOLD:
-        silver_flag = (
-            await db.execute(
-                select(Flag).where(
-                    Flag.user_id == user.id,
-                    Flag.store_id == store.id,
-                    Flag.type == FlagType.SILVER,
+        types_here = set(
+            (
+                await db.execute(
+                    select(Flag.type)
+                    .distinct()
+                    .where(Flag.user_id == user.id, Flag.store_id == store.id)
                 )
             )
-        ).scalars().first()
-        if silver_flag is not None:
+            .scalars()
+            .all()
+        )
+        if FlagType.SILVER in types_here and FlagType.GOLD not in types_here:
             upgraded = True
             user_stat.silver_flag_count = max(0, user_stat.silver_flag_count - 1)
             store_stat.silver_flag_count = max(0, store_stat.silver_flag_count - 1)

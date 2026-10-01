@@ -2,8 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Heart, UserPlus } from "lucide-react";
 
-import { TierBadge } from "@/components/badges";
+import { FlagMark, TierBadge } from "@/components/badges";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { FollowCounts, Profile } from "@/lib/types";
@@ -62,15 +63,12 @@ export default function PublicProfilePage() {
         <div className="big">{profile.nickname}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <TierBadge level={st.tier_level} />
-          <span
-            className="badge"
-            style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}
-          >
+          <span className="badge badge-on-dark">
             {profile.tier_name}
           </span>
         </div>
         {counts && (
-          <p style={{ color: "#f8e9d6", fontSize: 13, marginTop: 10 }}>
+          <p className="hero-sub" style={{ marginTop: 10 }}>
             팔로워 {counts.followers} · 팔로잉 {counts.following}
           </p>
         )}
@@ -83,18 +81,25 @@ export default function PublicProfilePage() {
           disabled={busy}
           onClick={toggleFollow}
         >
-          {counts.is_following ? "팔로잉 해제" : "+ 팔로우"}
+          {counts.is_following ? (
+            "팔로잉 해제"
+          ) : (
+            <>
+              <UserPlus size={18} strokeWidth={2.5} />
+              팔로우
+            </>
+          )}
         </button>
       )}
 
       <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="card">
           <div className="num">{st.gold_flag_count}</div>
-          <div className="lbl">🥇 골드</div>
+          <div className="lbl"><FlagMark type="GOLD" size={12} />골드</div>
         </div>
         <div className="card">
           <div className="num">{st.silver_flag_count}</div>
-          <div className="lbl">🥈 실버</div>
+          <div className="lbl"><FlagMark type="SILVER" size={12} />실버</div>
         </div>
         <div className="card">
           <div className="num">{st.conquered_store_count}</div>
@@ -106,7 +111,7 @@ export default function PublicProfilePage() {
         </div>
         <div className="card">
           <div className="num">{st.received_like_count}</div>
-          <div className="lbl">받은 ♥</div>
+          <div className="lbl"><Heart size={12} />받은 좋아요</div>
         </div>
         <div className="card">
           <div className="num">{profile.national_rank ?? "–"}</div>

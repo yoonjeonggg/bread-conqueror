@@ -13,7 +13,8 @@ export interface UserStat {
 export interface Profile {
   id: number;
   nickname: string;
-  email: string;
+  // only present on your own profile (/users/me); null on public profiles
+  email: string | null;
   profile_image_url: string | null;
   role: "USER" | "ADMIN";
   stat: UserStat;

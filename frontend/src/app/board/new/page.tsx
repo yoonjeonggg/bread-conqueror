@@ -3,22 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 
 export default function NewPostPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useRequireAuth();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!loading && !user) {
-    router.replace("/login");
-    return null;
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,11 +31,14 @@ export default function NewPostPage() {
     }
   }
 
+  if (!user) return null;
+
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="link-accent">
-          ← 게시판
+        <Link href="/board" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          게시판
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           빵집 추천 글쓰기
@@ -64,13 +64,6 @@ export default function NewPostPage() {
             onChange={(e) => setContent(e.target.value)}
             rows={8}
             required
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 10,
-              padding: 12,
-              fontFamily: "inherit",
-              fontSize: 14,
-            }}
           />
         </div>
         <p className="muted" style={{ fontSize: 12 }}>

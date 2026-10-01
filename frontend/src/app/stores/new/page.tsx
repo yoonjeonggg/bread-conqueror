@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChevronLeft, MapPin } from "lucide-react";
 
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 
 export default function NewStorePage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useRequireAuth();
   const { coords, locate } = useGeolocation();
 
   const [name, setName] = useState("");
@@ -19,10 +20,6 @@ export default function NewStorePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!loading && !user) {
-    router.replace("/login");
-    return null;
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,11 +45,14 @@ export default function NewStorePage() {
     }
   }
 
+  if (!user) return null;
+
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="link-accent">
-          ← 지도
+        <Link href="/map" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          지도
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           신규 매장 등록
@@ -99,8 +99,8 @@ export default function NewStorePage() {
           className="row"
           style={{ justifyContent: "space-between", fontSize: 12 }}
         >
-          <span className="muted">
-            📍{" "}
+          <span className="muted inline-ico">
+            <MapPin size={13} />
             {coords
               ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
               : "위치 확인 중…"}

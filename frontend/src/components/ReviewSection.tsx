@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Review } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 import { StarPicker, Stars } from "./StarRating";
 
 export function ReviewSection({ storeId }: { storeId: number }) {
@@ -57,19 +58,12 @@ export function ReviewSection({ storeId }: { storeId: number }) {
           </div>
           <StarPicker value={rating} onChange={setRating} />
           <textarea
+            className="input"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="맛, 분위기, 추천 메뉴…"
             rows={3}
-            style={{
-              width: "100%",
-              marginTop: 10,
-              border: "1px solid var(--line)",
-              borderRadius: 10,
-              padding: 10,
-              fontFamily: "inherit",
-              fontSize: 14,
-            }}
+            style={{ width: "100%", marginTop: 10 }}
           />
           {error && <p className="error-text">{error}</p>}
           <button
@@ -99,7 +93,7 @@ export function ReviewSection({ storeId }: { storeId: number }) {
             <p style={{ fontSize: 14, margin: "6px 0 0" }}>{r.content}</p>
           )}
           <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-            {new Date(r.created_at).toLocaleDateString("ko-KR")}
+            {formatDate(r.created_at)}
             {r.author_tier_level ? ` · 티어 Lv.${r.author_tier_level}` : ""}
           </div>
         </div>

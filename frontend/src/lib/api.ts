@@ -43,10 +43,14 @@ interface Options {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  signal?: AbortSignal;
 }
 
 async function request<T>(path: string, opts: Options = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // Content-Type only when there is a body: on a bodyless GET it just turns a
+  // "simple" cross-origin request into one that needs a CORS preflight.
+  const headers: Record<string, string> = {};
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.auth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -57,6 +61,7 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     cache: "no-store",
+    signal: opts.signal,
   });
 
   if (res.status === 204) return undefined as T;
@@ -89,10 +94,16 @@ export const api = {
 
   profile: (userId: number) => request<Profile>(`/users/${userId}`),
 
-  nearbyStores: (lat: number, lng: number, radiusM = 3000) =>
+  nearbyStores: (
+    lat: number,
+    lng: number,
+    radiusM = 3000,
+    signal?: AbortSignal,
+    limit = 100,
+  ) =>
     request<Store[]>(
-      `/stores?lat=${lat}&lng=${lng}&radius_m=${radiusM}&limit=100`,
-      { auth: true },
+      `/stores?lat=${lat}&lng=${lng}&radius_m=${radiusM}&limit=${limit}`,
+      { auth: true, signal },
     ),
 
   store: (id: number) => request<Store>(`/stores/${id}`),

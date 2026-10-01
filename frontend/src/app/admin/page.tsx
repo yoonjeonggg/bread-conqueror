@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft, ExternalLink, FileText } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AdminClaim } from "@/lib/types";
+import { formatDate } from "@/lib/format";
+import { safeExternalUrl } from "@/lib/safeRedirect";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -22,6 +25,7 @@ export default function AdminPage() {
   const [mergeTarget, setMergeTarget] = useState("");
   const [mergeSource, setMergeSource] = useState("");
   const [mergeMsg, setMergeMsg] = useState<string | null>(null);
+  const [mergeOk, setMergeOk] = useState(false);
   const [merging, setMerging] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvName, setCsvName] = useState<string | null>(null);
@@ -83,9 +87,10 @@ export default function AdminPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🛠️ 관리자</div>
-        <Link href="/profile" className="link-accent">
-          ← 내 정보
+        <div className="page-title">관리자</div>
+        <Link href="/profile" className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          내 정보
         </Link>
       </div>
 
@@ -112,7 +117,7 @@ export default function AdminPage() {
                 {r.target_type} #{r.target_id}
               </span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(r.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(r.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 14, margin: "8px 0" }}>{r.reason}</p>
@@ -151,21 +156,13 @@ export default function AdminPage() {
             <div className="row" style={{ justifyContent: "space-between" }}>
               <span className="badge badge-gold">{c.store_name}</span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(c.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(c.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 13, margin: "8px 0 4px" }}>
               신청자 <strong>{c.user_nickname}</strong> · {c.contact_phone}
             </p>
-            <a
-              href={c.business_license_image_url}
-              target="_blank"
-              rel="noreferrer"
-              className="link-accent"
-              style={{ fontSize: 12 }}
-            >
-              사업자등록증 보기 ↗
-            </a>
+            <LicenseLink url={c.business_license_image_url} />
             <div className="row" style={{ gap: 8, marginTop: 10 }}>
               <button
                 className="btn btn-ghost"
@@ -204,7 +201,8 @@ export default function AdminPage() {
           className="btn btn-ghost"
           style={{ cursor: "pointer", marginBottom: 8 }}
         >
-          {csvName ? `📄 ${csvName}` : "📄 CSV 파일 선택"}
+          <FileText size={18} strokeWidth={2.25} />
+          {csvName ?? "CSV 파일 선택"}
           <input
             type="file"
             accept=".csv,text/csv"
@@ -304,7 +302,7 @@ export default function AdminPage() {
         {mergeMsg && (
           <p
             style={{ fontSize: 13, margin: "4px 0 8px" }}
-            className={mergeMsg.startsWith("✅") ? "link-accent" : "error-text"}
+            className={mergeOk ? "link-accent" : "error-text"}
           >
             {mergeMsg}
           </p>
@@ -320,8 +318,9 @@ export default function AdminPage() {
                 Number(mergeTarget),
                 Number(mergeSource),
               );
+              setMergeOk(true);
               setMergeMsg(
-                `✅ 병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
+                `병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
                   ` (중복 ${res.dropped_duplicate_reviews} 폐기), 게시글 ${res.moved_posts}` +
                   (res.owner_inherited ? ", 소유자 승계됨" : ""),
               );
@@ -350,5 +349,28 @@ export default function AdminPage() {
         <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
       </div>
     </div>
+  );
+}
+
+function LicenseLink({ url }: { url: string }) {
+  const href = safeExternalUrl(url);
+  if (!href) {
+    return (
+      <span className="muted" style={{ fontSize: 12 }}>
+        사업자등록증 링크가 올바르지 않습니다
+      </span>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="link-accent"
+      style={{ fontSize: 12 }}
+    >
+      사업자등록증 보기
+      <ExternalLink size={12} strokeWidth={2.5} />
+    </a>
   );
 }

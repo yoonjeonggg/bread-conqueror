@@ -1,13 +1,16 @@
+import math
+from collections.abc import Sequence
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
 
 from app.core.dependencies import CurrentUser, DbSession, OptionalUser
 from app.models.enums import StoreCreatedSource, StoreStatus
-from app.models.flag import Flag
 from app.models.store import Store, StoreStat
+from app.models.user import User
 from app.schemas.store import (
     StoreCreate,
     StoreFilters,
@@ -15,9 +18,19 @@ from app.schemas.store import (
     StoreOut,
     StoreSearchResult,
 )
+from app.services import store_service
 from app.services.geo_service import bounding_box, haversine_m
+from app.utils.sql import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(prefix="/stores", tags=["stores"])
+
+
+async def _conquered_by(
+    db: AsyncSession, user: User | None, stores: Sequence[Store]
+) -> set[int]:
+    if user is None:
+        return set()
+    return await store_service.conquered_store_ids(db, user.id, [s.id for s in stores])
 
 
 @router.get("", response_model=list[StoreListItem])
@@ -30,6 +43,13 @@ async def list_nearby(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[StoreListItem]:
     min_lat, max_lat, min_lng, max_lng = bounding_box(lat, lng, radius_m)
+    # order by an equirectangular distance proxy *before* LIMIT so dense areas
+    # can't truncate away the nearest stores; exact haversine is applied below.
+    # The small overshoot covers bbox corners that fall outside the radius.
+    lng_scale = math.cos(math.radians(lat))
+    approx_dist_sq = (Store.lat - lat) * (Store.lat - lat) + (
+        (Store.lng - lng) * lng_scale
+    ) * ((Store.lng - lng) * lng_scale)
     rows = (
         (
             await db.execute(
@@ -40,27 +60,15 @@ async def list_nearby(
                     Store.lat.between(min_lat, max_lat),
                     Store.lng.between(min_lng, max_lng),
                 )
-                .limit(limit * 3)
+                .order_by(approx_dist_sq)
+                .limit(limit + 10)
             )
         )
         .scalars()
         .all()
     )
 
-    my_store_ids: set[int] = set()
-    if user is not None and rows:
-        my_store_ids = set(
-            (
-                await db.execute(
-                    select(Flag.store_id.distinct()).where(
-                        Flag.user_id == user.id,
-                        Flag.store_id.in_([s.id for s in rows]),
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
+    my_store_ids = await _conquered_by(db, user, rows)
 
     items: list[StoreListItem] = []
     for store in rows:
@@ -91,8 +99,13 @@ async def search_stores(
     """F-SEARCH — 위치와 무관한 키워드/필터 검색."""
     conds = [Store.status == StoreStatus.ACTIVE]
     if q and q.strip():
-        like = f"%{q.strip()}%"
-        conds.append(or_(Store.name.ilike(like), Store.address.ilike(like)))
+        like = contains_pattern(q.strip())
+        conds.append(
+            or_(
+                Store.name.ilike(like, escape=LIKE_ESCAPE),
+                Store.address.ilike(like, escape=LIKE_ESCAPE),
+            )
+        )
     if region_sido:
         conds.append(Store.region_sido == region_sido)
     if category:
@@ -122,20 +135,7 @@ async def search_stores(
 
     rows = (await db.execute(stmt)).scalars().all()
 
-    mine: set[int] = set()
-    if user is not None and rows:
-        mine = set(
-            (
-                await db.execute(
-                    select(Flag.store_id.distinct()).where(
-                        Flag.user_id == user.id,
-                        Flag.store_id.in_([s.id for s in rows]),
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
+    mine = await _conquered_by(db, user, rows)
 
     items: list[StoreListItem] = []
     for store in rows:

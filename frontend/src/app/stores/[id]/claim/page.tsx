@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { Store } from "@/lib/types";
 
 export default function StoreClaimPage() {
   const params = useParams<{ id: string }>();
   const storeId = Number(params.id);
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  useRequireAuth();
 
   const [store, setStore] = useState<Store | null>(null);
   const [licenseUrl, setLicenseUrl] = useState("");
@@ -21,9 +21,6 @@ export default function StoreClaimPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     api.store(storeId).then(setStore).catch(() => setStore(null));
@@ -72,8 +69,9 @@ export default function StoreClaimPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 매장
+        <Link href={`/stores/${storeId}`} className="back-link">
+          <ChevronLeft size={20} strokeWidth={2.5} />
+          매장
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           매장 소유권 신청
@@ -97,6 +95,8 @@ export default function StoreClaimPage() {
               <label htmlFor="license">사업자등록증 이미지 URL</label>
               <input
                 id="license"
+                type="url"
+                pattern="https?://.+"
                 value={licenseUrl}
                 maxLength={500}
                 placeholder="https://..."

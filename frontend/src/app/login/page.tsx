@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safeRedirect";
+
+const DEV = process.env.NODE_ENV === "development";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,11 +16,11 @@ export default function LoginPage() {
   const [next, setNext] = useState("/");
 
   useEffect(() => {
-    const n = new URLSearchParams(window.location.search).get("next");
-    if (n && n.startsWith("/")) setNext(n);
+    setNext(safeNextPath(new URLSearchParams(window.location.search).get("next")));
   }, []);
-  const [email, setEmail] = useState("demo@bread.dev");
-  const [password, setPassword] = useState("demo1234");
+  // demo credentials are a local-dev convenience only — never ship them prefilled
+  const [email, setEmail] = useState(DEV ? "demo@bread.dev" : "");
+  const [password, setPassword] = useState(DEV ? "demo1234" : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

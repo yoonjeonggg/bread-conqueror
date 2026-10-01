@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { ArrowRight, TrendingUp } from "lucide-react";
 
+import { FlagMark } from "@/components/badges";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ConquestResponse } from "@/lib/types";
@@ -76,8 +78,14 @@ function QrConquer() {
   return (
     <div className="page">
       <div className="conquer-celebrate">
-        <div className="flag">
-          {result?.upgraded_from_silver ? "🥈➜🥇" : "🥇"}
+        <div className={`flag ${result?.upgraded_from_silver ? "wide" : ""}`}>
+          {result?.upgraded_from_silver && (
+            <>
+              <FlagMark type="SILVER" size={44} />
+              <ArrowRight size={28} color="#fff" strokeWidth={2.5} />
+            </>
+          )}
+          <FlagMark type="GOLD" size={56} />
         </div>
         <h2 style={{ margin: "12px 0 4px" }}>
           {result?.upgraded_from_silver ? "골드로 업그레이드!" : "QR 정복 완료!"}
@@ -86,8 +94,12 @@ function QrConquer() {
         <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
           <div className="big">+{result?.exp_granted} EXP</div>
           {result?.tier_changed && (
-            <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-              🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
+            <p
+              className="hero-sub inline-ico"
+              style={{ margin: "8px 0 0", fontSize: 14 }}
+            >
+              <TrendingUp size={16} color="var(--accent)" strokeWidth={2.5} />
+              티어가 Lv.{result.new_tier_level}로 상승했습니다!
             </p>
           )}
         </div>

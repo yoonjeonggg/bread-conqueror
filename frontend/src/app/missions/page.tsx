@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/auth";
 import type { WeeklyMission } from "@/lib/types";
 
 export default function MissionsPage() {
-  const router = useRouter();
-  const { user, loading, refresh } = useAuth();
+  const { user, refresh } = useRequireAuth();
   const [missions, setMissions] = useState<WeeklyMission[]>([]);
   const [weekStart, setWeekStart] = useState("");
   const [ready, setReady] = useState(false);
@@ -28,9 +26,6 @@ export default function MissionsPage() {
       .finally(() => setReady(true));
   }, []);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login?next=/missions");
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (user) load();
@@ -61,7 +56,7 @@ export default function MissionsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🎯 이번 주 미션</div>
+        <div className="page-title">이번 주 미션</div>
         <Link href="/profile" className="link-accent">
           내 정보
         </Link>
@@ -71,7 +66,7 @@ export default function MissionsPage() {
         {weekStart && `${weekStart} 주간`} · 매주 월요일 초기화. 완료한 미션의
         보상은 직접 수령해야 EXP가 들어옵니다.
         {claimable > 0 && (
-          <strong style={{ color: "var(--orange)" }}>
+          <strong style={{ color: "var(--accent)" }}>
             {" "}
             받을 보상 {claimable}개!
           </strong>
@@ -89,7 +84,7 @@ export default function MissionsPage() {
             <div key={m.code} className="card">
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <strong style={{ fontSize: 15 }}>{m.title}</strong>
-                <span className="badge badge-gold">+{m.reward_exp} EXP</span>
+                <span className="badge badge-accent">+{m.reward_exp} EXP</span>
               </div>
               <p className="muted" style={{ fontSize: 13, margin: "4px 0 10px" }}>
                 {m.description}
@@ -116,7 +111,7 @@ export default function MissionsPage() {
                     {busy === m.code ? "…" : "보상 받기"}
                   </button>
                 ) : (
-                  <span className="badge badge-silver">진행 중</span>
+                  <span className="badge badge-dark">진행 중</span>
                 )}
               </div>
             </div>

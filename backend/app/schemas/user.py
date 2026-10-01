@@ -26,6 +26,9 @@ class UserOut(BaseModel):
 
 
 class ProfileOut(UserOut):
+    # only filled in for the owner's own profile (/users/me) — never on the
+    # public /users/{id} response, which anyone can call without logging in
+    email: str | None = None  # type: ignore[assignment]
     stat: UserStatOut
     tier_name: str
     national_rank: int | None = None
