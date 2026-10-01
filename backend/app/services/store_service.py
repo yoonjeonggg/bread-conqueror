@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.enums import FlagType, StoreStatus
 from app.models.flag import Flag
@@ -34,6 +35,35 @@ class MergeResult:
     moved_claims: int
     moved_qr_tokens: int
     owner_inherited: bool
+
+
+async def get_open_store(
+    db: AsyncSession, store_id: int, *, with_stat: bool = False
+) -> Store:
+    """Store that can still take new activity (flags, reviews, claims) — 404 if closed."""
+    stmt = select(Store).where(Store.id == store_id)
+    if with_stat:
+        stmt = stmt.options(selectinload(Store.stat))
+    store = (await db.execute(stmt)).scalar_one_or_none()
+    if store is None or store.status == StoreStatus.CLOSED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
+        )
+    return store
+
+
+async def conquered_store_ids(
+    db: AsyncSession, user_id: int, store_ids: list[int]
+) -> set[int]:
+    """Which of ``store_ids`` the user has planted a flag on."""
+    if not store_ids:
+        return set()
+    rows = await db.execute(
+        select(Flag.store_id.distinct()).where(
+            Flag.user_id == user_id, Flag.store_id.in_(store_ids)
+        )
+    )
+    return set(rows.scalars().all())
 
 
 async def _count(db: AsyncSession, *where) -> int:

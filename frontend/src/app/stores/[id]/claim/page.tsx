@@ -95,6 +95,8 @@ export default function StoreClaimPage() {
               <label htmlFor="license">사업자등록증 이미지 URL</label>
               <input
                 id="license"
+                type="url"
+                pattern="https?://.+"
                 value={licenseUrl}
                 maxLength={500}
                 placeholder="https://..."

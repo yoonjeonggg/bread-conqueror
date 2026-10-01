@@ -23,6 +23,7 @@ from app.schemas.claim import (
     QrTokenCreate,
     QrTokenOut,
 )
+from app.services import store_service
 
 router = APIRouter(tags=["claims"])
 
@@ -59,11 +60,7 @@ async def _owned_store(db: DbSession, store_id: int, user: CurrentUser) -> Store
 async def create_claim(
     store_id: int, payload: ClaimCreate, db: DbSession, user: CurrentUser
 ) -> StoreClaim:
-    store = await db.get(Store, store_id)
-    if store is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
-        )
+    store = await store_service.get_open_store(db, store_id)
     if store.owner_id is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

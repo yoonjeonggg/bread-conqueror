@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AdminClaim } from "@/lib/types";
 import { formatDate } from "@/lib/format";
+import { safeExternalUrl } from "@/lib/safeRedirect";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
 type Report = Awaited<ReturnType<typeof api.adminReports>>[number];
@@ -161,16 +162,7 @@ export default function AdminPage() {
             <p style={{ fontSize: 13, margin: "8px 0 4px" }}>
               신청자 <strong>{c.user_nickname}</strong> · {c.contact_phone}
             </p>
-            <a
-              href={c.business_license_image_url}
-              target="_blank"
-              rel="noreferrer"
-              className="link-accent"
-              style={{ fontSize: 12 }}
-            >
-              사업자등록증 보기
-              <ExternalLink size={12} strokeWidth={2.5} />
-            </a>
+            <LicenseLink url={c.business_license_image_url} />
             <div className="row" style={{ gap: 8, marginTop: 10 }}>
               <button
                 className="btn btn-ghost"
@@ -357,5 +349,28 @@ export default function AdminPage() {
         <br />· 매장 CSV 대량 등록 <code>POST /admin/stores/bulk-upload</code>
       </div>
     </div>
+  );
+}
+
+function LicenseLink({ url }: { url: string }) {
+  const href = safeExternalUrl(url);
+  if (!href) {
+    return (
+      <span className="muted" style={{ fontSize: 12 }}>
+        사업자등록증 링크가 올바르지 않습니다
+      </span>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="link-accent"
+      style={{ fontSize: 12 }}
+    >
+      사업자등록증 보기
+      <ExternalLink size={12} strokeWidth={2.5} />
+    </a>
   );
 }

@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import decode_token
+from app.core.security import token_subject
 from app.db.session import get_db
 from app.models.enums import UserRole, UserStatus
 from app.models.user import User
@@ -31,11 +31,8 @@ async def get_current_user(
     if not token:
         raise _CREDENTIALS_EXC
     try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise _CREDENTIALS_EXC
-        user_id = int(payload["sub"])
-    except (jwt.PyJWTError, KeyError, ValueError) as exc:
+        user_id = token_subject(token, "access")
+    except jwt.PyJWTError as exc:
         raise _CREDENTIALS_EXC from exc
 
     user = await db.get(User, user_id)

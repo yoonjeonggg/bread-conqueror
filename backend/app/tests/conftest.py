@@ -68,3 +68,55 @@ async def _reset_redis_pool():
 
     with contextlib.suppress(Exception):
         await redis_client.aclose()
+
+
+class FakeThrottleRedis:
+    """Just enough of redis.asyncio for services/login_throttle — TTLs are
+    tracked but never elapse, which is what the lockout tests want."""
+
+    def __init__(self) -> None:
+        self.values: dict[str, int] = {}
+        self.ttls: dict[str, int] = {}
+
+    async def get(self, key: str) -> str | None:
+        value = self.values.get(key)
+        return None if value is None else str(value)
+
+    async def ttl(self, key: str) -> int:
+        return self.ttls.get(key, -2)
+
+    async def delete(self, key: str) -> None:
+        self.values.pop(key, None)
+        self.ttls.pop(key, None)
+
+    def pipeline(self) -> "FakeThrottleRedis._Pipeline":
+        return self._Pipeline(self)
+
+    class _Pipeline:
+        def __init__(self, redis: "FakeThrottleRedis") -> None:
+            self.redis = redis
+            self.ops: list[tuple[str, str, int]] = []
+
+        def incr(self, key: str) -> None:
+            self.ops.append(("incr", key, 0))
+
+        def expire(self, key: str, seconds: int) -> None:
+            self.ops.append(("expire", key, seconds))
+
+        async def execute(self) -> None:
+            for op, key, arg in self.ops:
+                if op == "incr":
+                    self.redis.values[key] = self.redis.values.get(key, 0) + 1
+                else:
+                    self.redis.ttls[key] = arg
+
+
+@pytest.fixture(autouse=True)
+def throttle_redis(monkeypatch) -> FakeThrottleRedis:
+    """Login throttling talks to Redis; give each test its own in-memory one so
+    attempts never leak between tests (or depend on a running Redis)."""
+    from app.api.v1.routers import auth
+
+    fake = FakeThrottleRedis()
+    monkeypatch.setattr(auth, "redis_client", fake)
+    return fake

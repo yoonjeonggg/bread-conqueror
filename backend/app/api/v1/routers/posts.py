@@ -18,16 +18,9 @@ from app.schemas.post import (
     PostOut,
 )
 from app.services import notification_service
+from app.utils.sql import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(prefix="/posts", tags=["posts"])
-
-
-LIKE_ESCAPE = "\\"
-
-
-def _escape_like(term: str) -> str:
-    # user input is a literal search term, not a LIKE pattern
-    return term.replace(LIKE_ESCAPE, LIKE_ESCAPE * 2).replace("%", r"\%").replace("_", r"\_")
 
 
 async def _published_post(db: AsyncSession, post_id: int) -> Post:
@@ -48,7 +41,7 @@ async def list_posts(
 ) -> list[Post]:
     stmt = select(Post).where(Post.status == ContentStatus.PUBLISHED)
     if q and q.strip():
-        like = f"%{_escape_like(q.strip())}%"
+        like = contains_pattern(q.strip())
         stmt = stmt.where(
             or_(
                 Post.title.ilike(like, escape=LIKE_ESCAPE),

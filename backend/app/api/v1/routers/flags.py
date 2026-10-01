@@ -6,18 +6,22 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentUser, DbSession
 from app.core.redis import redis_client
-from app.models.enums import EvidenceType, FlagType, NotificationType, StoreStatus
+from app.models.enums import EvidenceType, FlagType, NotificationType
 from app.models.flag import Flag
 from app.models.store import Store
 from app.models.store_qr_token import StoreQrToken
 from app.models.user import User, UserStat
 from app.schemas.claim import QrConquerRequest
 from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
-from app.services import flag_service, notification_service, ranking_service
+from app.services import (
+    flag_service,
+    notification_service,
+    ranking_service,
+    store_service,
+)
 from app.utils.exif import extract
 
 router = APIRouter(prefix="/flags", tags=["flags"])
@@ -25,19 +29,6 @@ router = APIRouter(prefix="/flags", tags=["flags"])
 # ~10MB image once base64-encoded (+ data-URL prefix). Anything bigger is not a
 # phone photo; refuse it before decoding/parsing rather than after.
 MAX_EXIF_IMAGE_B64 = 14_000_000
-
-
-async def _active_store(db: AsyncSession, store_id: int) -> Store:
-    store = (
-        await db.execute(
-            select(Store).options(selectinload(Store.stat)).where(Store.id == store_id)
-        )
-    ).scalar_one_or_none()
-    if store is None or store.status == StoreStatus.CLOSED:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="매장을 찾을 수 없습니다."
-        )
-    return store
 
 
 async def _finish_conquest(
@@ -80,7 +71,7 @@ async def _finish_conquest(
 async def create_flag(
     payload: FlagCreate, db: DbSession, user: CurrentUser
 ) -> ConquestResponse:
-    store = await _active_store(db, payload.store_id)
+    store = await store_service.get_open_store(db, payload.store_id, with_stat=True)
 
     result = await flag_service.create_flag(
         db,
@@ -135,7 +126,7 @@ async def conquer_by_qr(
     if consumed.rowcount != 1:
         raise gone
 
-    store = await _active_store(db, token.store_id)
+    store = await store_service.get_open_store(db, token.store_id, with_stat=True)
 
     result = await flag_service.create_flag(
         db,

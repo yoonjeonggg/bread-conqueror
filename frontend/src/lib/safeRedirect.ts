@@ -16,3 +16,15 @@ export function safeNextPath(raw: string | null | undefined, fallback = "/"): st
     return fallback;
   }
 }
+
+// User-supplied links (e.g. a claim's business-license URL shown to admins)
+// must never become javascript:/data: hrefs — only absolute http(s) URLs pass.
+export function safeExternalUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}

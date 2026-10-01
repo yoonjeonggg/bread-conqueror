@@ -33,12 +33,18 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   // the map/conquest pages need geolocation; nothing needs mic or payments.
   // camera stays blocked — photo evidence comes from a file input, not getUserMedia
   {
     key: "Permissions-Policy",
     value: "geolocation=(self), camera=(), microphone=(), payment=()",
   },
+  // browsers ignore HSTS over plain http, but keep it out of dev regardless so a
+  // local https setup doesn't pin localhost to https for a year
+  ...(isDev
+    ? []
+    : [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]),
 ];
 
 /** @type {import('next').NextConfig} */
