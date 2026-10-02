@@ -31,4 +31,10 @@ class ProfileOut(UserOut):
     email: str | None = None  # type: ignore[assignment]
     stat: UserStatOut
     tier_name: str
+    # progress bar on the owner's profile: exp floor of the current tier and the
+    # next tier's requirements (null at the top tier)
+    tier_min_exp: int = 0
+    next_tier_name: str | None = None
+    next_tier_exp: int | None = None
+    next_tier_gold_ratio: float | None = None
     national_rank: int | None = None

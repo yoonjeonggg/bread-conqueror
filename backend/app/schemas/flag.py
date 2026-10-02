@@ -22,6 +22,21 @@ class FlagCreate(BaseModel):
         return self
 
 
+class MyFlagOut(BaseModel):
+    """Profile history row: just what the list shows, plus the store's name."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    store_id: int
+    store_name: str
+    type: FlagType
+    exp_granted: int
+    is_flagged: bool
+    upgraded_from_silver: bool
+    created_at: datetime
+
+
 class FlagOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

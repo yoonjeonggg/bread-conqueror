@@ -5,6 +5,7 @@ import type {
   ConquestResponse,
   Flag,
   FollowCounts,
+  MyFlag,
   Post,
   Profile,
   QrToken,
@@ -130,7 +131,11 @@ export const api = {
   }) =>
     request<ConquestResponse>("/flags", { method: "POST", body, auth: true }),
 
-  myFlags: () => request<Flag[]>("/flags/me", { auth: true }),
+  myFlags: (limit = 20, beforeId?: number) =>
+    request<MyFlag[]>(
+      `/flags/me?limit=${limit}${beforeId ? `&before_id=${beforeId}` : ""}`,
+      { auth: true },
+    ),
 
   conquerByQr: (token: string) =>
     request<ConquestResponse>("/flags/qr", {

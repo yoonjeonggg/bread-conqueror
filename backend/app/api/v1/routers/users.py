@@ -14,6 +14,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def _profile(db: DbSession, user: User, *, is_self: bool) -> ProfileOut:
     stat = await db.get(UserStat, user.id) or UserStat(user_id=user.id)
     rank = await ranking_service.get_rank(redis_client, user.id)
+    tier = await tier_service.tier_progress(db, stat.tier_level or 1)
     return ProfileOut(
         id=user.id,
         nickname=user.nickname,
@@ -21,7 +22,11 @@ async def _profile(db: DbSession, user: User, *, is_self: bool) -> ProfileOut:
         profile_image_url=user.profile_image_url,
         role=user.role,
         stat=UserStatOut.model_validate(stat),
-        tier_name=await tier_service.tier_name(db, stat.tier_level),
+        tier_name=tier.name,
+        tier_min_exp=tier.min_exp,
+        next_tier_name=tier.next_name,
+        next_tier_exp=tier.next_min_exp,
+        next_tier_gold_ratio=tier.next_gold_ratio,
         national_rank=rank,
     )
 

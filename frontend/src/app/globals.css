@@ -684,3 +684,81 @@ a.card:hover {
 .map-pin-dot.silver {
   background: #c3cad3;
 }
+
+/* Placeholder blocks shown while profile data loads — same footprint as the
+   real content so nothing jumps when it arrives */
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 0%, #f5f5f5 50%, var(--line) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.hero .skeleton {
+  background: linear-gradient(90deg, #262626 0%, #333 50%, #262626 100%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.tier-progress {
+  margin-top: 16px;
+}
+
+.tier-progress .mission-bar {
+  background: #2e2e2e;
+}
+
+.tier-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #bdbdbd;
+}
+
+.tier-progress-meta strong {
+  color: #fff;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-row .name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-row .sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.history-row .chev {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}

@@ -1,8 +1,9 @@
 import base64
 import binascii
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,7 @@ from app.models.store import Store
 from app.models.store_qr_token import StoreQrToken
 from app.models.user import User, UserStat
 from app.schemas.claim import QrConquerRequest
-from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut
+from app.schemas.flag import ConquestResponse, FlagCreate, FlagOut, MyFlagOut
 from app.services import (
     flag_service,
     notification_service,
@@ -153,19 +154,28 @@ async def conquer_by_qr(
     return await _finish_conquest(db, user, store, result)
 
 
-@router.get("/me", response_model=list[FlagOut])
-async def my_flags(db: DbSession, user: CurrentUser) -> list[Flag]:
-    return list(
-        (
-            await db.execute(
-                select(Flag)
-                .where(Flag.user_id == user.id)
-                .order_by(Flag.created_at.desc())
-            )
-        )
-        .scalars()
-        .all()
+@router.get("/me", response_model=list[MyFlagOut])
+async def my_flags(
+    db: DbSession,
+    user: CurrentUser,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    before_id: Annotated[int | None, Query(gt=0)] = None,
+) -> list[MyFlagOut]:
+    # newest first, paged by id cursor — heavy conquerors have hundreds of flags
+    stmt = (
+        select(Flag, Store.name)
+        .join(Store, Store.id == Flag.store_id)
+        .where(Flag.user_id == user.id)
+        .order_by(Flag.id.desc())
+        .limit(limit)
     )
+    if before_id is not None:
+        stmt = stmt.where(Flag.id < before_id)
+    rows = (await db.execute(stmt)).all()
+    return [
+        MyFlagOut.model_validate({**flag.__dict__, "store_name": name})
+        for flag, name in rows
+    ]
 
 
 class ExifPreviewRequest(BaseModel):

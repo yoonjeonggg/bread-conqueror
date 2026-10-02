@@ -7,6 +7,8 @@ them without a deploy.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,6 +73,29 @@ async def recalculate_tier(db: AsyncSession, stat: UserStat) -> bool:
         stat.tier_level = new_level
         return True
     return False
+
+
+@dataclass(frozen=True)
+class TierProgress:
+    name: str
+    min_exp: int
+    next_name: str | None
+    next_min_exp: int | None
+    next_gold_ratio: float | None
+
+
+async def tier_progress(db: AsyncSession, level: int) -> TierProgress:
+    """Current tier plus what the next one asks for, from a single ladder read."""
+    ladder = await _ladder(db)
+    current = next((t for t in ladder if t[0] == level), ladder[0])
+    upper = next((t for t in ladder if t[0] > current[0]), None)
+    return TierProgress(
+        name=current[1],
+        min_exp=current[2],
+        next_name=upper[1] if upper else None,
+        next_min_exp=upper[2] if upper else None,
+        next_gold_ratio=upper[3] if upper else None,
+    )
 
 
 async def tier_name(db: AsyncSession, level: int) -> str:

@@ -19,7 +19,23 @@ export interface Profile {
   role: "USER" | "ADMIN";
   stat: UserStat;
   tier_name: string;
+  tier_min_exp: number;
+  next_tier_name: string | null;
+  next_tier_exp: number | null;
+  next_tier_gold_ratio: number | null;
   national_rank: number | null;
+}
+
+// /flags/me row — a slimmed flag plus the store's name for the history list
+export interface MyFlag {
+  id: number;
+  store_id: number;
+  store_name: string;
+  type: FlagType;
+  exp_granted: number;
+  is_flagged: boolean;
+  upgraded_from_silver: boolean;
+  created_at: string;
 }
 
 export interface StoreStat {
