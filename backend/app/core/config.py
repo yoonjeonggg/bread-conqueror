@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Logging
+    log_level: str = "INFO"
+    log_json: bool = False  # one JSON object per line, for log collectors
+
     # Database / cache
     database_url: str
     redis_url: str = "redis://localhost:6379/0"
