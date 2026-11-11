@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { TierBadge } from "@/components/badges";
+import { FlagBadge, FlagIcon, TierBadge } from "@/components/badges";
+import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import type { Flag, StoreClaim } from "@/lib/types";
 
 const CLAIM_LABEL: Record<string, string> = {
@@ -48,7 +50,7 @@ export default function ProfilePage() {
         <button
           onClick={logout}
           className="muted"
-          style={{ background: "none", border: "none", cursor: "pointer" }}
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "10px 0" }}
         >
           로그아웃
         </button>
@@ -58,27 +60,27 @@ export default function ProfilePage() {
         <div className="big">{user.nickname}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <TierBadge level={st.tier_level} />
-          <span
-            className="badge"
-            style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}
-          >
-            {user.tier_name}
-          </span>
         </div>
-        <p style={{ color: "#f8e9d6", fontSize: 13, marginTop: 10 }}>
-          EXP {st.exp} · 전국{" "}
+        <p className="hsub" style={{ margin: "10px 0 0" }}>
+          EXP {st.exp.toLocaleString()} · 전국{" "}
           {user.national_rank ? `${user.national_rank}위` : "순위권 밖"}
         </p>
       </div>
 
-      <div className="stat-grid" style={{ marginTop: 16 }}>
+      <div className="stat-grid" style={{ marginTop: 14 }}>
         <div className="card">
           <div className="num">{st.gold_flag_count}</div>
-          <div className="lbl">🥇 골드</div>
+          <div className="lbl">
+            <FlagIcon type="GOLD" />
+            골드
+          </div>
         </div>
         <div className="card">
           <div className="num">{st.silver_flag_count}</div>
-          <div className="lbl">🥈 실버</div>
+          <div className="lbl">
+            <FlagIcon type="SILVER" />
+            실버
+          </div>
         </div>
         <div className="card">
           <div className="num">{st.conquered_store_count}</div>
@@ -90,7 +92,10 @@ export default function ProfilePage() {
         </div>
         <div className="card">
           <div className="num">{st.received_like_count}</div>
-          <div className="lbl">받은 ♥</div>
+          <div className="lbl">
+            <Icon name="heart" size={12} strokeWidth={2} />
+            받은 좋아요
+          </div>
         </div>
         <div className="card">
           <div className="num">
@@ -101,15 +106,17 @@ export default function ProfilePage() {
       </div>
 
       <Link href="/missions">
-        <button className="btn btn-secondary" style={{ marginTop: 16 }}>
-          🎯 이번 주 미션
+        <button className="btn btn-secondary" style={{ marginTop: 14 }}>
+          <Icon name="target" size={18} />
+          이번 주 미션
         </button>
       </Link>
 
       {user.role === "ADMIN" && (
         <Link href="/admin">
           <button className="btn btn-secondary" style={{ marginTop: 10 }}>
-            🛠️ 관리자 대시보드
+            <Icon name="wrench" size={18} />
+            관리자 대시보드
           </button>
         </Link>
       )}
@@ -154,14 +161,12 @@ export default function ProfilePage() {
             className="card row"
             style={{ justifyContent: "space-between", display: "flex" }}
           >
-            <span
-              className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}
-            >
-              {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"} · +{f.exp_granted} EXP
-            </span>
+            <FlagBadge type={f.type}>
+              {f.type === "GOLD" ? "골드" : "실버"} · +{f.exp_granted} EXP
+            </FlagBadge>
             <span className="muted" style={{ fontSize: 12 }}>
-              {new Date(f.created_at).toLocaleDateString("ko-KR")}
-              {f.is_flagged ? " · ⚠️검토중" : ""}
+              {formatDate(f.created_at)}
+              {f.is_flagged ? " · 검토중" : ""}
             </span>
           </Link>
         ))

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Icon } from "@/components/Icon";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Store } from "@/lib/types";
@@ -72,8 +73,9 @@ export default function StoreClaimPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 매장
+        <Link href={`/stores/${storeId}`} className="back-link">
+          <Icon name="chevronLeft" size={20} />
+          매장
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           매장 소유권 신청

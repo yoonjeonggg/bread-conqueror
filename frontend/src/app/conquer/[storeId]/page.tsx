@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { FlagIcon } from "@/components/badges";
+import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatMonthDay } from "@/lib/format";
 import type { ConquestResponse, Store } from "@/lib/types";
 
 type Mode = "GOLD" | "SILVER";
@@ -92,7 +95,13 @@ export default function ConquerPage() {
       <div className="page">
         <div className="conquer-celebrate">
           <div className="flag">
-            {result.upgraded_from_silver ? "🥈➜🥇" : mode === "GOLD" ? "🥇" : "🥈"}
+            {result.upgraded_from_silver && (
+              <>
+                <FlagIcon type="SILVER" size={56} />
+                <Icon name="arrowRight" size={28} color="var(--ink-soft)" />
+              </>
+            )}
+            <FlagIcon type={result.upgraded_from_silver || mode === "GOLD" ? "GOLD" : "SILVER"} size={72} />
           </div>
           <h2 style={{ margin: "12px 0 4px" }}>
             {result.upgraded_from_silver ? "골드로 업그레이드!" : "정복 완료!"}
@@ -103,13 +112,15 @@ export default function ConquerPage() {
           <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
             <div className="big">+{result.exp_granted} EXP</div>
             {result.tier_changed && (
-              <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-                🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
+              <p className="hsub ii" style={{ margin: "8px 0 0", fontSize: 14 }}>
+                <Icon name="trendingUp" size={16} />
+                티어가 Lv.{result.new_tier_level}로 상승했습니다!
               </p>
             )}
             {result.is_flagged && (
-              <p style={{ color: "#ffd9d0", margin: "8px 0 0", fontSize: 13 }}>
-                ⚠️ 이상 패턴이 감지되어 검토 대기 상태입니다.
+              <p className="hsub" style={{ margin: "8px 0 0" }}>
+                <Icon name="alert" size={14} style={{ verticalAlign: "-2px", marginRight: 4 }} />
+                이상 패턴이 감지되어 검토 대기 상태입니다.
                 {result.abuse_reasons.map((r) => (
                   <span key={r}> {r}.</span>
                 ))}
@@ -131,9 +142,10 @@ export default function ConquerPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 취소
+      <div className="page-header" style={{ marginBottom: 14 }}>
+        <Link href={`/stores/${storeId}`} className="back-link">
+          <Icon name="chevronLeft" size={20} />
+          취소
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           정복하기
@@ -150,20 +162,20 @@ export default function ConquerPage() {
       )}
 
       <div className="section-title">인증 방식</div>
-      <div className="pill-row">
+      <div className="tabs">
         <button
-          className={`badge ${mode === "GOLD" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab${mode === "GOLD" ? " on" : ""}`}
           onClick={() => setMode("GOLD")}
         >
-          🥇 실시간 (GPS+사진)
+          <FlagIcon type="GOLD" size={14} />
+          실시간 (GPS+사진)
         </button>
         <button
-          className={`badge ${mode === "SILVER" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab${mode === "SILVER" ? " on" : ""}`}
           onClick={() => setMode("SILVER")}
         >
-          🥈 과거 방문 등록
+          <FlagIcon type="SILVER" size={14} />
+          과거 방문 등록
         </button>
       </div>
 
@@ -171,7 +183,10 @@ export default function ConquerPage() {
         {mode === "GOLD" ? (
           <>
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <span>📍 현재 위치</span>
+              <span className="ii" style={{ fontWeight: 700 }}>
+                <Icon name="mapPin" size={16} />
+                현재 위치
+              </span>
               <span className="muted" style={{ fontSize: 12 }}>
                 {coords
                   ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
@@ -181,12 +196,12 @@ export default function ConquerPage() {
             {geoError && (
               <p className="error-text">{geoError} 매장 근처에서 시도하세요.</p>
             )}
-            <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+            <p className="muted" style={{ fontSize: 13, margin: "8px 0 0", lineHeight: 1.5 }}>
               매장 반경 50m 이내에서만 골드 깃발을 꽂을 수 있습니다. 경험치 100%.
             </p>
           </>
         ) : (
-          <p className="muted" style={{ fontSize: 13 }}>
+          <p className="muted" style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
             과거에 방문한 빵집을 등록합니다. 경험치 50%, 하루 5곳까지.
             나중에 재방문해 실시간 인증하면 골드로 업그레이드됩니다.
           </p>
@@ -196,7 +211,8 @@ export default function ConquerPage() {
           className="btn btn-ghost"
           style={{ marginTop: 12, cursor: "pointer" }}
         >
-          {photoName ? `📷 ${photoName}` : "📷 사진 첨부"}
+          <Icon name="camera" size={18} strokeWidth={2.25} />
+          {photoName ?? "사진 첨부"}
           <input
             type="file"
             accept="image/*"
@@ -218,7 +234,7 @@ export default function ConquerPage() {
           >
             EXIF 신뢰도 {exif.trust}
             {exif.captured_at
-              ? ` · 촬영 ${new Date(exif.captured_at).toLocaleDateString("ko-KR")}`
+              ? ` · 촬영 ${formatMonthDay(exif.captured_at)}`
               : ""}
             {exif.has_gps ? " · GPS 포함" : ""}
           </div>
@@ -233,7 +249,8 @@ export default function ConquerPage() {
         disabled={submitting || (mode === "GOLD" && !coords)}
         onClick={submit}
       >
-        {submitting ? "정복 중…" : "🚩 깃발 꽂기"}
+        {!submitting && <FlagIcon size={18} />}
+        {submitting ? "정복 중…" : "깃발 꽂기"}
       </button>
     </div>
   );

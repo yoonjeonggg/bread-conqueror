@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
+import { FlagIcon } from "@/components/badges";
+import { Icon } from "@/components/Icon";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ConquestResponse } from "@/lib/types";
@@ -77,7 +79,13 @@ function QrConquer() {
     <div className="page">
       <div className="conquer-celebrate">
         <div className="flag">
-          {result?.upgraded_from_silver ? "🥈➜🥇" : "🥇"}
+          {result?.upgraded_from_silver && (
+            <>
+              <FlagIcon type="SILVER" size={56} />
+              <Icon name="arrowRight" size={28} color="var(--ink-soft)" />
+            </>
+          )}
+          <FlagIcon type="GOLD" size={72} />
         </div>
         <h2 style={{ margin: "12px 0 4px" }}>
           {result?.upgraded_from_silver ? "골드로 업그레이드!" : "QR 정복 완료!"}
@@ -86,8 +94,9 @@ function QrConquer() {
         <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
           <div className="big">+{result?.exp_granted} EXP</div>
           {result?.tier_changed && (
-            <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-              🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
+            <p className="hsub ii" style={{ margin: "8px 0 0", fontSize: 14 }}>
+              <Icon name="trendingUp" size={16} />
+              티어가 Lv.{result.new_tier_level}로 상승했습니다!
             </p>
           )}
         </div>

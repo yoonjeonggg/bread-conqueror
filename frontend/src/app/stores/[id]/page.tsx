@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { FlagCount, VerifiedBadge } from "@/components/badges";
+import { FlagBadge, FlagCount, FlagIcon, VerifiedBadge } from "@/components/badges";
+import { Icon } from "@/components/Icon";
 import { ReportButton } from "@/components/ReportButton";
 import { ReviewSection } from "@/components/ReviewSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import type { Flag, Store } from "@/lib/types";
 
 export default function StoreDetailPage() {
@@ -43,17 +45,23 @@ export default function StoreDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="link-accent">
-          ← 지도
+        <Link href="/map" className="back-link">
+          <Icon name="chevronLeft" size={20} />
+          지도
         </Link>
       </div>
 
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <div className="page-title">{store.name}</div>
-          {store.is_verified_owner && <VerifiedBadge />}
-        </div>
-        <p className="muted" style={{ fontSize: 13, margin: "4px 0 12px" }}>
+        <div className="page-title" style={{ fontSize: 22 }}>{store.name}</div>
+        {store.is_verified_owner && (
+          <div className="row" style={{ margin: "6px 0 10px" }}>
+            <VerifiedBadge />
+          </div>
+        )}
+        <p
+          className="muted"
+          style={{ fontSize: 13, margin: store.is_verified_owner ? "0 0 12px" : "4px 0 12px" }}
+        >
           {store.address}
           {store.category ? ` · ${store.category}` : ""}
         </p>
@@ -82,7 +90,8 @@ export default function StoreDetailPage() {
       {user ? (
         <Link href={`/conquer/${store.id}`}>
           <button className="btn btn-primary" style={{ marginTop: 16 }}>
-            🚩 방문 인증하고 정복하기
+            <FlagIcon size={18} />
+            방문 인증하고 정복하기
           </button>
         </Link>
       ) : (
@@ -96,7 +105,8 @@ export default function StoreDetailPage() {
       {user && store.owner_id === user.id && (
         <Link href={`/stores/${store.id}/manage`}>
           <button className="btn btn-secondary" style={{ marginTop: 10 }}>
-            🏪 매장 관리 · QR 발급
+            <Icon name="store" size={18} />
+            매장 관리 · QR 발급
           </button>
         </Link>
       )}
@@ -117,13 +127,11 @@ export default function StoreDetailPage() {
         flags.slice(0, 20).map((f) => (
           <div key={f.id} className="card">
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <span
-                className={`badge ${f.type === "GOLD" ? "badge-gold" : "badge-silver"}`}
-              >
-                {f.type === "GOLD" ? "🥇 골드" : "🥈 실버"}
-              </span>
+              <FlagBadge type={f.type}>
+                {f.type === "GOLD" ? "골드" : "실버"}
+              </FlagBadge>
               <span className="muted" style={{ fontSize: 12 }}>
-                {new Date(f.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(f.created_at)}
                 {f.upgraded_from_silver ? " · 업그레이드" : ""}
               </span>
             </div>

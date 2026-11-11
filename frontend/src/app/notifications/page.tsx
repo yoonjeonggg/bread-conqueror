@@ -4,20 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Icon, type IconName } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { AppNotification, NotificationType } from "@/lib/types";
 
-const ICON: Record<NotificationType, string> = {
-  FOLLOW: "👤",
-  POST_COMMENT: "💬",
-  POST_LIKE: "❤️",
-  CLAIM_APPROVED: "✅",
-  CLAIM_REJECTED: "🚫",
-  TIER_UP: "🎉",
-  FLAG_APPROVED: "🥇",
-  FLAG_INVALIDATED: "⚠️",
-  QR_CONQUEST: "🚩",
+const ICON: Record<NotificationType, { name: IconName; color: string; fill?: boolean }> = {
+  FOLLOW: { name: "userPlus", color: "var(--accent)" },
+  POST_COMMENT: { name: "comment", color: "var(--accent)" },
+  POST_LIKE: { name: "heart", color: "var(--danger)", fill: true },
+  CLAIM_APPROVED: { name: "badgeCheck", color: "var(--ok)" },
+  CLAIM_REJECTED: { name: "ban", color: "var(--danger)" },
+  TIER_UP: { name: "trendingUp", color: "var(--accent)" },
+  FLAG_APPROVED: { name: "flag", color: "var(--gold)", fill: true },
+  FLAG_INVALIDATED: { name: "alert", color: "var(--danger)" },
+  QR_CONQUEST: { name: "flag", color: "var(--accent)", fill: true },
 };
 
 function hrefFor(n: AppNotification): string | null {
@@ -74,7 +75,7 @@ export default function NotificationsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🔔 알림</div>
+        <div className="page-title">알림</div>
         {unreadCount > 0 && (
           <button
             className="link-accent"
@@ -98,7 +99,15 @@ export default function NotificationsPage() {
           const href = hrefFor(n);
           const body = (
             <div className={`card notif-item ${n.is_read ? "" : "unread"}`}>
-              <span className="notif-dot">{ICON[n.type] ?? "🔔"}</span>
+              <span className="notif-dot">
+                <Icon
+                  name={ICON[n.type]?.name ?? "bell"}
+                  color={ICON[n.type]?.color}
+                  fill={ICON[n.type]?.fill}
+                  size={18}
+                  strokeWidth={2}
+                />
+              </span>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 14, margin: 0 }}>{n.message}</p>
                 <span className="muted" style={{ fontSize: 12 }}>

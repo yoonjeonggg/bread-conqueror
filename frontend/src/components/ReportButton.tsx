@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Icon } from "./Icon";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -38,9 +39,13 @@ export function ReportButton({
           border: "none",
           cursor: "pointer",
           fontSize: 12,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
         }}
       >
-        🚩 {label}
+        <Icon name="alert" size={12} strokeWidth={2} />
+        {label}
       </button>
       {open && (
         <div className="card" style={{ marginTop: 8 }}>

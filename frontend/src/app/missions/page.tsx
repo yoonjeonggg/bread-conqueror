@@ -61,7 +61,7 @@ export default function MissionsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🎯 이번 주 미션</div>
+        <div className="page-title">이번 주 미션</div>
         <Link href="/profile" className="link-accent">
           내 정보
         </Link>

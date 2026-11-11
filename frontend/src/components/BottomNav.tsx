@@ -6,14 +6,15 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { Icon, type IconName } from "./Icon";
 
-const ITEMS = [
-  { href: "/", label: "홈", ico: "🏠" },
-  { href: "/map", label: "지도", ico: "🗺️" },
-  { href: "/board", label: "게시판", ico: "📝" },
-  { href: "/notifications", label: "알림", ico: "🔔" },
-  { href: "/ranking", label: "랭킹", ico: "🏆" },
-  { href: "/profile", label: "내정보", ico: "🚩" },
+const ITEMS: { href: string; label: string; ico: IconName }[] = [
+  { href: "/", label: "홈", ico: "home" },
+  { href: "/map", label: "지도", ico: "map" },
+  { href: "/board", label: "게시판", ico: "board" },
+  { href: "/notifications", label: "알림", ico: "bell" },
+  { href: "/ranking", label: "랭킹", ico: "trophy" },
+  { href: "/profile", label: "내정보", ico: "user" },
 ];
 
 export function BottomNav() {
@@ -52,8 +53,8 @@ export function BottomNav() {
             href={it.href}
             className={active ? "active" : undefined}
           >
-            <span className="ico" style={{ position: "relative" }}>
-              {it.ico}
+            <span className="ico">
+              <Icon name={it.ico} size={22} strokeWidth={active ? 2.2 : 2} />
               {showBadge && (
                 <span className="nav-badge">{unread > 9 ? "9+" : unread}</span>
               )}

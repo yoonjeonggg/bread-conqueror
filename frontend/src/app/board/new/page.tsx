@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Icon } from "@/components/Icon";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -37,8 +38,9 @@ export default function NewPostPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="link-accent">
-          ← 게시판
+        <Link href="/board" className="back-link">
+          <Icon name="chevronLeft" size={20} />
+          게시판
         </Link>
         <div className="page-title" style={{ fontSize: 18 }}>
           빵집 추천 글쓰기
@@ -64,13 +66,6 @@ export default function NewPostPage() {
             onChange={(e) => setContent(e.target.value)}
             rows={8}
             required
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 10,
-              padding: 12,
-              fontFamily: "inherit",
-              fontSize: 14,
-            }}
           />
         </div>
         <p className="muted" style={{ fontSize: 12 }}>
