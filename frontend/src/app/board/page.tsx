@@ -61,13 +61,13 @@ export default function BoardPage() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <div className="pill-row">
+        <div className="tabs">
           {(["recent", "popular"] as Sort[]).map((s) => (
             <button
               key={s}
               type="button"
-              className={`badge ${sort === s ? "badge-gold" : "badge-silver"}`}
-              style={{ border: "none", cursor: "pointer" }}
+              className={`tab${sort === s ? " on" : ""}`}
+              aria-pressed={sort === s}
               onClick={() => setSort(s)}
             >
               {s === "recent" ? "최신순" : "인기순"}

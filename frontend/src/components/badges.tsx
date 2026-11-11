@@ -1,11 +1,11 @@
-import { TIER_NAMES } from "@/lib/types";
+import { TIER_NAMES, type FlagType } from "@/lib/types";
 import { Icon } from "./Icon";
 
 export function FlagIcon({
   type,
   size = 12,
 }: {
-  type?: "GOLD" | "SILVER";
+  type?: FlagType;
   size?: number;
 }) {
   // Without a type the flag takes the surrounding badge's text color.
@@ -18,7 +18,7 @@ export function FlagBadge({
   type,
   children,
 }: {
-  type: "GOLD" | "SILVER";
+  type: FlagType;
   children: React.ReactNode;
 }) {
   return (

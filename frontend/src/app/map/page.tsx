@@ -12,15 +12,24 @@ import type { Store } from "@/lib/types";
 
 const RADII = [1000, 3000, 8000];
 
-// Position a store on the board as % offsets from the centre (the user),
-// scaled so the search radius reaches the board's edge.
+// Pixels from the board centre that the search radius maps to. One scale for
+// both axes keeps north/south and east/west distances comparable; it fits the
+// board's short side (286px tall, see .map-board).
+const RADIUS_PX = 120;
+// A pin is anchored at its tip (translate(-50%, -100%)) and is about 64×36px,
+// so keep its anchor this far from each edge to stay fully on the board.
+const PIN_HALF_W = 34;
+const PIN_H = 40;
+const EDGE = 4;
+
 function pinPosition(center: Coords, store: Store, radius: number) {
   const dx = (store.lng - center.lng) * 111320 * Math.cos((center.lat * Math.PI) / 180);
   const dy = (store.lat - center.lat) * 110540;
-  const clamp = (v: number) => Math.min(94, Math.max(6, v));
+  const x = (dx / radius) * RADIUS_PX;
+  const y = (dy / radius) * RADIUS_PX;
   return {
-    left: `${clamp(50 + (dx / radius) * 50)}%`,
-    top: `${clamp(50 - (dy / radius) * 50)}%`,
+    left: `clamp(${PIN_HALF_W}px, calc(50% + ${x.toFixed(1)}px), calc(100% - ${PIN_HALF_W}px))`,
+    top: `clamp(${PIN_H}px, calc(50% - ${y.toFixed(1)}px), calc(100% - ${EDGE}px))`,
   };
 }
 
@@ -29,16 +38,28 @@ export default function MapPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [radius, setRadius] = useState(3000);
   const [status, setStatus] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     if (!coords) return;
+    // Drop the previous radius's stores so they are never drawn at the new
+    // scale, and ignore responses that arrive after a newer request started.
+    let current = true;
     setStatus(null);
+    setStores([]);
+    setFetching(true);
     api
       .nearbyStores(coords.lat, coords.lng, radius)
-      .then(setStores)
-      .catch((e) =>
-        setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다."),
-      );
+      .then((rows) => current && setStores(rows))
+      .catch(
+        (e) =>
+          current &&
+          setStatus(e instanceof ApiError ? e.message : "매장을 불러오지 못했습니다."),
+      )
+      .finally(() => current && setFetching(false));
+    return () => {
+      current = false;
+    };
   }, [coords, radius]);
 
   const c = coords ?? DEFAULT_COORDS;
@@ -122,7 +143,9 @@ export default function MapPage() {
         {error ?? (
           <>
             반경 {radius / 1000}km 안의 베이커리{" "}
-            <strong style={{ color: "var(--ink)" }}>{stores.length}곳</strong>
+            <strong style={{ color: "var(--ink)" }}>
+              {fetching ? "…" : `${stores.length}곳`}
+            </strong>
           </>
         )}
       </div>
@@ -135,8 +158,9 @@ export default function MapPage() {
         </Link>
       </div>
       {loading && <div className="card list-empty">위치 확인 중…</div>}
+      {!loading && fetching && <div className="card list-empty">불러오는 중…</div>}
       {status && <div className="card list-empty">{status}</div>}
-      {!loading && !status && stores.length === 0 && (
+      {!loading && !fetching && !status && stores.length === 0 && (
         <div className="card list-empty">
           이 반경에는 등록된 빵집이 없습니다.
         </div>

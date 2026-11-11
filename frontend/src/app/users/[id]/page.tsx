@@ -3,9 +3,8 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { FlagIcon } from "@/components/badges";
+import { FlagIcon, TierBadge } from "@/components/badges";
 import { Icon } from "@/components/Icon";
-import { TierBadge } from "@/components/badges";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { FollowCounts, Profile } from "@/lib/types";

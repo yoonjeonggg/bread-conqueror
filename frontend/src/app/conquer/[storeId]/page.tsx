@@ -9,7 +9,7 @@ import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { formatMonthDay } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { ConquestResponse, Store } from "@/lib/types";
 
 type Mode = "GOLD" | "SILVER";
@@ -234,7 +234,7 @@ export default function ConquerPage() {
           >
             EXIF 신뢰도 {exif.trust}
             {exif.captured_at
-              ? ` · 촬영 ${formatMonthDay(exif.captured_at)}`
+              ? ` · 촬영 ${formatDate(exif.captured_at)}`
               : ""}
             {exif.has_gps ? " · GPS 포함" : ""}
           </div>

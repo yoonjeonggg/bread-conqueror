@@ -23,7 +23,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
   const [mergeSource, setMergeSource] = useState("");
-  const [mergeMsg, setMergeMsg] = useState<string | null>(null);
+  const [mergeMsg, setMergeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [merging, setMerging] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvName, setCsvName] = useState<string | null>(null);
@@ -308,9 +308,9 @@ export default function AdminPage() {
         {mergeMsg && (
           <p
             style={{ fontSize: 13, margin: "4px 0 8px" }}
-            className={mergeMsg.startsWith("병합 완료") ? "link-accent" : "error-text"}
+            className={mergeMsg.ok ? "link-accent" : "error-text"}
           >
-            {mergeMsg}
+            {mergeMsg.text}
           </p>
         )}
         <button
@@ -324,17 +324,20 @@ export default function AdminPage() {
                 Number(mergeTarget),
                 Number(mergeSource),
               );
-              setMergeMsg(
-                `병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
+              setMergeMsg({
+                ok: true,
+                text:
+                  `병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
                   ` (중복 ${res.dropped_duplicate_reviews} 폐기), 게시글 ${res.moved_posts}` +
                   (res.owner_inherited ? ", 소유자 승계됨" : ""),
-              );
+              });
               setMergeSource("");
               api.adminDashboard().then(setData).catch(() => {});
             } catch (e) {
-              setMergeMsg(
-                e instanceof Error ? e.message : "병합에 실패했습니다.",
-              );
+              setMergeMsg({
+                ok: false,
+                text: e instanceof Error ? e.message : "병합에 실패했습니다.",
+              });
             } finally {
               setMerging(false);
             }

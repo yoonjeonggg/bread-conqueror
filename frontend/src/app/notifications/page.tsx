@@ -97,13 +97,14 @@ export default function NotificationsPage() {
       ) : (
         items.map((n) => {
           const href = hrefFor(n);
+          const ic = ICON[n.type];
           const body = (
             <div className={`card notif-item ${n.is_read ? "" : "unread"}`}>
               <span className="notif-dot">
                 <Icon
-                  name={ICON[n.type]?.name ?? "bell"}
-                  color={ICON[n.type]?.color}
-                  fill={ICON[n.type]?.fill}
+                  name={ic?.name ?? "bell"}
+                  color={ic?.color}
+                  fill={ic?.fill}
                   size={18}
                   strokeWidth={2}
                 />

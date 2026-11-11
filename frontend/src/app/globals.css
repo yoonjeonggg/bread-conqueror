@@ -195,6 +195,13 @@ button {
   color: #fff;
 }
 
+/* Unselected state of a toggle chip: outlined, so it never reads as "on". */
+.badge-off {
+  background: var(--surface);
+  color: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
 .badge-on {
   background: rgba(255, 255, 255, 0.24);
   color: #fff;

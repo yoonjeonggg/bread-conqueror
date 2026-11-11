@@ -125,7 +125,7 @@ export default function SearchPage() {
             ))}
           </select>
           <label
-            className={`badge ${verified ? "badge-verified" : "badge-silver"}`}
+            className={`badge ${verified ? "badge-verified" : "badge-off"}`}
             style={{ cursor: "pointer" }}
           >
             <input
