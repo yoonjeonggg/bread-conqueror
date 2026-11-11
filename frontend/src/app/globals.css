@@ -329,6 +329,7 @@ button {
 
 .hero .card {
   border-color: transparent;
+  color: var(--ink);
 }
 
 .stat-grid {
