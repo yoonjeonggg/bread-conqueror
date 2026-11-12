@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { Icon } from "@/components/Icon";
 import { ReportButton } from "@/components/ReportButton";
 import { api, ApiError } from "@/lib/api";
@@ -54,10 +54,7 @@ export default function PostDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="back-link">
-          <Icon name="chevronLeft" size={20} />
-          게시판
-        </Link>
+        <BackLink href="/board" label="게시판" />
       </div>
 
       <div className="card">

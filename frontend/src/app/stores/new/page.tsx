@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
@@ -52,10 +52,7 @@ export default function NewStorePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="back-link">
-          <Icon name="chevronLeft" size={20} />
-          지도
-        </Link>
+        <BackLink href="/map" label="지도" />
         <div className="page-title" style={{ fontSize: 18 }}>
           신규 매장 등록
         </div>

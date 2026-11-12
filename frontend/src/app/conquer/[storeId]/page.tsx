@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { FlagIcon } from "@/components/badges";
+import { ConquestResult } from "@/components/ConquestResult";
 import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
@@ -92,61 +93,21 @@ export default function ConquerPage() {
 
   if (result) {
     return (
-      <div className="page">
-        <div className="conquer-celebrate">
-          <div className="flag">
-            {result.upgraded_from_silver && (
-              <>
-                <FlagIcon type="SILVER" size={56} />
-                <Icon name="arrowRight" size={28} color="var(--ink-soft)" />
-              </>
-            )}
-            <FlagIcon type={result.upgraded_from_silver || mode === "GOLD" ? "GOLD" : "SILVER"} size={72} />
-          </div>
-          <h2 style={{ margin: "12px 0 4px" }}>
-            {result.upgraded_from_silver ? "골드로 업그레이드!" : "정복 완료!"}
-          </h2>
-          <p className="muted">
-            {store?.name}에 {mode === "GOLD" ? "골드" : "실버"} 깃발을 꽂았습니다.
-          </p>
-          <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
-            <div className="big">+{result.exp_granted} EXP</div>
-            {result.tier_changed && (
-              <p className="hsub ii" style={{ margin: "8px 0 0", fontSize: 14 }}>
-                <Icon name="trendingUp" size={16} />
-                티어가 Lv.{result.new_tier_level}로 상승했습니다!
-              </p>
-            )}
-            {result.is_flagged && (
-              <p className="hsub" style={{ margin: "8px 0 0" }}>
-                <Icon name="alert" size={14} style={{ verticalAlign: "-2px", marginRight: 4 }} />
-                이상 패턴이 감지되어 검토 대기 상태입니다.
-                {result.abuse_reasons.map((r) => (
-                  <span key={r}> {r}.</span>
-                ))}
-              </p>
-            )}
-          </div>
-          <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
-            <Link href={`/stores/${storeId}`}>
-              <button className="btn btn-secondary">매장으로 돌아가기</button>
-            </Link>
-            <Link href="/profile">
-              <button className="btn btn-ghost">내 깃발 보기</button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <ConquestResult
+        result={result}
+        flagType={mode}
+        title="정복 완료!"
+        description={`${store?.name}에 ${mode === "GOLD" ? "골드" : "실버"} 깃발을 꽂았습니다.`}
+        storeHref={`/stores/${storeId}`}
+        storeLabel="매장으로 돌아가기"
+      />
     );
   }
 
   return (
     <div className="page">
       <div className="page-header" style={{ marginBottom: 14 }}>
-        <Link href={`/stores/${storeId}`} className="back-link">
-          <Icon name="chevronLeft" size={20} />
-          취소
-        </Link>
+        <BackLink href={`/stores/${storeId}`} label="취소" />
         <div className="page-title" style={{ fontSize: 18 }}>
           정복하기
         </div>

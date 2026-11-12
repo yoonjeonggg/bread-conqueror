@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { FlagBadge, FlagCount, FlagIcon, VerifiedBadge } from "@/components/badges";
 import { Icon } from "@/components/Icon";
 import { ReportButton } from "@/components/ReportButton";
@@ -45,10 +46,7 @@ export default function StoreDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/map" className="back-link">
-          <Icon name="chevronLeft" size={20} />
-          지도
-        </Link>
+        <BackLink href="/map" label="지도" />
       </div>
 
       <div className="card">

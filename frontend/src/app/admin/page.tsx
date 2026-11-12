@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -86,10 +86,7 @@ export default function AdminPage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title">관리자</div>
-        <Link href="/profile" className="back-link">
-          <Icon name="chevronLeft" size={20} />
-          내 정보
-        </Link>
+        <BackLink href="/profile" label="내 정보" />
       </div>
 
       {error && <div className="card list-empty">{error}</div>}
