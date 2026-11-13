@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { HeaderActions } from "@/components/HeaderActions";
 import { StoreCard } from "@/components/StoreCard";
 import { TierBadge } from "@/components/badges";
 import { Icon } from "@/components/Icon";
@@ -12,7 +13,7 @@ import { useAuth } from "@/lib/auth";
 import type { Post, Store } from "@/lib/types";
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { coords } = useGeolocation();
   const [popular, setPopular] = useState<Store[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -58,17 +59,7 @@ export default function HomePage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title">Bread Conqueror</div>
-        <div className="row" style={{ gap: 12 }}>
-          <Link href="/search" className="link-accent">
-            <Icon name="search" size={18} />
-            검색
-          </Link>
-          {!loading && !user && (
-            <Link href="/login" className="link-accent">
-              로그인
-            </Link>
-          )}
-        </div>
+        <HeaderActions />
       </div>
 
       {user ? (

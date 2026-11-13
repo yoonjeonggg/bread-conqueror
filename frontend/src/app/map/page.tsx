@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
+import { HeaderActions } from "@/components/HeaderActions";
 import { Icon } from "@/components/Icon";
 import { StoreCard } from "@/components/StoreCard";
 import { DEFAULT_COORDS, useGeolocation, type Coords } from "@/components/useGeolocation";
@@ -68,10 +69,7 @@ export default function MapPage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title">지도</div>
-        <Link href="/search" className="link-accent">
-          <Icon name="search" size={18} />
-          검색
-        </Link>
+        <HeaderActions />
       </div>
 
       {/* Kakao Maps SDK drops in here — set NEXT_PUBLIC_KAKAO_MAP_KEY and

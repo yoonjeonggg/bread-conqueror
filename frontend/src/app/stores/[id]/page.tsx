@@ -116,8 +116,6 @@ export default function StoreDetailPage() {
         </Link>
       )}
 
-      <ReviewSection storeId={store.id} />
-
       <div className="section-title">최근 깃발</div>
       {flags.length === 0 ? (
         <div className="card list-empty">아직 이 빵집에 깃발이 없습니다.</div>
@@ -139,6 +137,8 @@ export default function StoreDetailPage() {
           </div>
         ))
       )}
+
+      <ReviewSection storeId={store.id} />
     </div>
   );
 }

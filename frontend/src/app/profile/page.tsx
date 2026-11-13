@@ -46,7 +46,7 @@ export default function ProfilePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">내 정보</div>
+        <div className="page-title">내 빵로그</div>
         <button
           onClick={logout}
           className="muted"
@@ -94,7 +94,7 @@ export default function ProfilePage() {
           <div className="num">{st.received_like_count}</div>
           <div className="lbl">
             <Icon name="heart" size={12} strokeWidth={2} />
-            받은 좋아요
+            좋아요
           </div>
         </div>
         <div className="card">

@@ -10,10 +10,20 @@ import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { formatDistance, formatShortDate, haversineM } from "@/lib/format";
 import type { ConquestResponse, Store } from "@/lib/types";
 
 type Mode = "GOLD" | "SILVER";
+
+// 골드 인증 반경 기본값 (서버 정책 CONQUEST_RADIUS_M). 화면 안내용이며
+// 실제 판정은 서버가 한다.
+const NEAR_M = 50;
+
+const EXIF_LABEL = {
+  HIGH: "촬영 정보 확인됨",
+  MEDIUM: "촬영 정보 일부 확인",
+  LOW: "촬영 정보 없음",
+} as const;
 
 export default function ConquerPage() {
   const params = useParams<{ storeId: string }>();
@@ -91,6 +101,9 @@ export default function ConquerPage() {
     }
   }
 
+  const distance =
+    coords && store ? haversineM(coords.lat, coords.lng, store.lat, store.lng) : null;
+
   if (result) {
     return (
       <ConquestResult
@@ -122,21 +135,19 @@ export default function ConquerPage() {
         </div>
       )}
 
-      <div className="section-title">인증 방식</div>
+      <div className="section-title">어떻게 다녀오셨나요?</div>
       <div className="tabs">
         <button
           className={`tab${mode === "GOLD" ? " on" : ""}`}
           onClick={() => setMode("GOLD")}
         >
-          <FlagIcon type="GOLD" size={14} />
-          실시간 (GPS+사진)
+          지금 여기예요
         </button>
         <button
           className={`tab${mode === "SILVER" ? " on" : ""}`}
           onClick={() => setMode("SILVER")}
         >
-          <FlagIcon type="SILVER" size={14} />
-          과거 방문 등록
+          예전에 다녀왔어요
         </button>
       </div>
 
@@ -148,23 +159,31 @@ export default function ConquerPage() {
                 <Icon name="mapPin" size={16} />
                 현재 위치
               </span>
-              <span className="muted" style={{ fontSize: 12 }}>
-                {coords
-                  ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-                  : "확인 중…"}
-              </span>
+              {distance == null ? (
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {geoError ? "확인 불가" : "확인 중…"}
+                </span>
+              ) : distance <= NEAR_M ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ok)" }}>
+                  매장 근처에 있어요
+                </span>
+              ) : (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>
+                  매장에서 {formatDistance(distance)} 떨어져 있어요
+                </span>
+              )}
             </div>
             {geoError && (
               <p className="error-text">{geoError} 매장 근처에서 시도하세요.</p>
             )}
             <p className="muted" style={{ fontSize: 13, margin: "8px 0 0", lineHeight: 1.5 }}>
-              매장 반경 50m 이내에서만 골드 깃발을 꽂을 수 있습니다. 경험치 100%.
+              매장 가까이에서 인증하면 골드 깃발과 경험치를 모두 받아요.
             </p>
           </>
         ) : (
           <p className="muted" style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-            과거에 방문한 빵집을 등록합니다. 경험치 50%, 하루 5곳까지.
-            나중에 재방문해 실시간 인증하면 골드로 업그레이드됩니다.
+            예전에 다녀온 빵집도 사진과 함께 남길 수 있어요. 경험치 50%,
+            하루 5곳까지. 다시 가서 인증하면 골드로 바뀌어요.
           </p>
         )}
 
@@ -193,11 +212,8 @@ export default function ConquerPage() {
             }`}
             style={{ marginTop: 10 }}
           >
-            EXIF 신뢰도 {exif.trust}
-            {exif.captured_at
-              ? ` · 촬영 ${formatDate(exif.captured_at)}`
-              : ""}
-            {exif.has_gps ? " · GPS 포함" : ""}
+            {EXIF_LABEL[exif.trust]}
+            {exif.captured_at ? ` · ${formatShortDate(exif.captured_at)}` : ""}
           </div>
         )}
       </div>
