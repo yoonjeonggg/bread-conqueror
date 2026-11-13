@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
+import { ConquestResult } from "@/components/ConquestResult";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ConquestResponse } from "@/lib/types";
@@ -73,34 +74,18 @@ function QrConquer() {
       </div>
     );
 
+  // "done" always has a result; the guard just narrows the type.
+  if (!result) return null;
+
   return (
-    <div className="page">
-      <div className="conquer-celebrate">
-        <div className="flag">
-          {result?.upgraded_from_silver ? "🥈➜🥇" : "🥇"}
-        </div>
-        <h2 style={{ margin: "12px 0 4px" }}>
-          {result?.upgraded_from_silver ? "골드로 업그레이드!" : "QR 정복 완료!"}
-        </h2>
-        <p className="muted">매장 QR로 골드 깃발을 꽂았습니다.</p>
-        <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
-          <div className="big">+{result?.exp_granted} EXP</div>
-          {result?.tier_changed && (
-            <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-              🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
-            </p>
-          )}
-        </div>
-        <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
-          <Link href={`/stores/${result?.flag.store_id}`}>
-            <button className="btn btn-secondary">매장 보기</button>
-          </Link>
-          <Link href="/profile">
-            <button className="btn btn-ghost">내 깃발 보기</button>
-          </Link>
-        </div>
-      </div>
-    </div>
+    <ConquestResult
+      result={result}
+      flagType="GOLD"
+      title="QR 정복 완료!"
+      description="매장 QR로 골드 깃발을 꽂았습니다."
+      storeHref={`/stores/${result.flag.store_id}`}
+      storeLabel="매장 보기"
+    />
   );
 }
 

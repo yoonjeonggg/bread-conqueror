@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { QrToken, Store } from "@/lib/types";
@@ -89,9 +89,7 @@ export default function StoreManagePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 매장
-        </Link>
+        <BackLink href={`/stores/${storeId}`} label="매장" />
         <div className="page-title" style={{ fontSize: 18 }}>
           매장 관리 · QR
         </div>

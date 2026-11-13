@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
+import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import type { AdminClaim } from "@/lib/types";
 
 type Dashboard = Awaited<ReturnType<typeof api.adminDashboard>>;
@@ -21,7 +23,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
   const [mergeSource, setMergeSource] = useState("");
-  const [mergeMsg, setMergeMsg] = useState<string | null>(null);
+  const [mergeMsg, setMergeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [merging, setMerging] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvName, setCsvName] = useState<string | null>(null);
@@ -83,10 +85,8 @@ export default function AdminPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">🛠️ 관리자</div>
-        <Link href="/profile" className="link-accent">
-          ← 내 정보
-        </Link>
+        <div className="page-title">관리자</div>
+        <BackLink href="/profile" label="내 정보" />
       </div>
 
       {error && <div className="card list-empty">{error}</div>}
@@ -112,7 +112,7 @@ export default function AdminPage() {
                 {r.target_type} #{r.target_id}
               </span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(r.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(r.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 14, margin: "8px 0" }}>{r.reason}</p>
@@ -151,7 +151,7 @@ export default function AdminPage() {
             <div className="row" style={{ justifyContent: "space-between" }}>
               <span className="badge badge-gold">{c.store_name}</span>
               <span className="muted" style={{ fontSize: 11 }}>
-                {new Date(c.created_at).toLocaleDateString("ko-KR")}
+                {formatDate(c.created_at)}
               </span>
             </div>
             <p style={{ fontSize: 13, margin: "8px 0 4px" }}>
@@ -204,7 +204,8 @@ export default function AdminPage() {
           className="btn btn-ghost"
           style={{ cursor: "pointer", marginBottom: 8 }}
         >
-          {csvName ? `📄 ${csvName}` : "📄 CSV 파일 선택"}
+          <Icon name="file" size={18} strokeWidth={2.25} />
+          {csvName ?? "CSV 파일 선택"}
           <input
             type="file"
             accept=".csv,text/csv"
@@ -304,9 +305,9 @@ export default function AdminPage() {
         {mergeMsg && (
           <p
             style={{ fontSize: 13, margin: "4px 0 8px" }}
-            className={mergeMsg.startsWith("✅") ? "link-accent" : "error-text"}
+            className={mergeMsg.ok ? "link-accent" : "error-text"}
           >
-            {mergeMsg}
+            {mergeMsg.text}
           </p>
         )}
         <button
@@ -320,17 +321,20 @@ export default function AdminPage() {
                 Number(mergeTarget),
                 Number(mergeSource),
               );
-              setMergeMsg(
-                `✅ 병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
+              setMergeMsg({
+                ok: true,
+                text:
+                  `병합 완료 — 깃발 ${res.moved_flags}, 리뷰 ${res.moved_reviews}` +
                   ` (중복 ${res.dropped_duplicate_reviews} 폐기), 게시글 ${res.moved_posts}` +
                   (res.owner_inherited ? ", 소유자 승계됨" : ""),
-              );
+              });
               setMergeSource("");
               api.adminDashboard().then(setData).catch(() => {});
             } catch (e) {
-              setMergeMsg(
-                e instanceof Error ? e.message : "병합에 실패했습니다.",
-              );
+              setMergeMsg({
+                ok: false,
+                text: e instanceof Error ? e.message : "병합에 실패했습니다.",
+              });
             } finally {
               setMerging(false);
             }

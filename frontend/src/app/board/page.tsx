@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Post } from "@/lib/types";
@@ -36,9 +37,10 @@ export default function BoardPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-title">📝 추천 게시판</div>
+        <div className="page-title">추천 게시판</div>
         {user && (
           <Link href="/board/new" className="link-accent">
+            <Icon name="plus" size={16} />
             글쓰기
           </Link>
         )}
@@ -59,13 +61,13 @@ export default function BoardPage() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <div className="pill-row">
+        <div className="tabs">
           {(["recent", "popular"] as Sort[]).map((s) => (
             <button
               key={s}
               type="button"
-              className={`badge ${sort === s ? "badge-gold" : "badge-silver"}`}
-              style={{ border: "none", cursor: "pointer" }}
+              className={`tab${sort === s ? " on" : ""}`}
+              aria-pressed={sort === s}
               onClick={() => setSort(s)}
             >
               {s === "recent" ? "최신순" : "인기순"}
@@ -96,7 +98,9 @@ export default function BoardPage() {
             <span className="badge badge-gold">
               티어 Lv.{p.author_tier_snapshot}
             </span>{" "}
-            깃발 {p.author_flag_count_snapshot} · ♥ {p.like_count}
+            깃발 {p.author_flag_count_snapshot} ·{" "}
+            <Icon name="heart" size={12} strokeWidth={2} style={{ verticalAlign: "-1px" }} />{" "}
+            {p.like_count}
           </div>
         </Link>
       ))}

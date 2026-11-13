@@ -3,7 +3,8 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { TierBadge } from "@/components/badges";
+import { FlagIcon, TierBadge } from "@/components/badges";
+import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { FollowCounts, Profile } from "@/lib/types";
@@ -62,15 +63,9 @@ export default function PublicProfilePage() {
         <div className="big">{profile.nickname}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <TierBadge level={st.tier_level} />
-          <span
-            className="badge"
-            style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}
-          >
-            {profile.tier_name}
-          </span>
         </div>
         {counts && (
-          <p style={{ color: "#f8e9d6", fontSize: 13, marginTop: 10 }}>
+          <p className="hsub" style={{ margin: "10px 0 0" }}>
             팔로워 {counts.followers} · 팔로잉 {counts.following}
           </p>
         )}
@@ -90,11 +85,17 @@ export default function PublicProfilePage() {
       <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="card">
           <div className="num">{st.gold_flag_count}</div>
-          <div className="lbl">🥇 골드</div>
+          <div className="lbl">
+            <FlagIcon type="GOLD" />
+            골드
+          </div>
         </div>
         <div className="card">
           <div className="num">{st.silver_flag_count}</div>
-          <div className="lbl">🥈 실버</div>
+          <div className="lbl">
+            <FlagIcon type="SILVER" />
+            실버
+          </div>
         </div>
         <div className="card">
           <div className="num">{st.conquered_store_count}</div>
@@ -106,7 +107,10 @@ export default function PublicProfilePage() {
         </div>
         <div className="card">
           <div className="num">{st.received_like_count}</div>
-          <div className="lbl">받은 ♥</div>
+          <div className="lbl">
+            <Icon name="heart" size={12} strokeWidth={2} />
+            받은 좋아요
+          </div>
         </div>
         <div className="card">
           <div className="num">{profile.national_rank ?? "–"}</div>

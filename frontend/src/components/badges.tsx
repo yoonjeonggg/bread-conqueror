@@ -1,4 +1,33 @@
-import { TIER_NAMES } from "@/lib/types";
+import { TIER_NAMES, type FlagType } from "@/lib/types";
+import { Icon } from "./Icon";
+
+export function FlagIcon({
+  type,
+  size = 12,
+}: {
+  type?: FlagType;
+  size?: number;
+}) {
+  // Without a type the flag takes the surrounding badge's text color.
+  const color =
+    type === "GOLD" ? "var(--gold)" : type === "SILVER" ? "var(--silver)" : "currentColor";
+  return <Icon name="flag" size={size} color={color} fill />;
+}
+
+export function FlagBadge({
+  type,
+  children,
+}: {
+  type: FlagType;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className={`badge ${type === "GOLD" ? "badge-gold" : "badge-silver"}`}>
+      <FlagIcon />
+      {children}
+    </span>
+  );
+}
 
 export function FlagCount({
   gold,
@@ -9,21 +38,26 @@ export function FlagCount({
 }) {
   return (
     <span className="pill-row">
-      <span className="badge badge-gold">🥇 골드 {gold}</span>
-      <span className="badge badge-silver">🥈 실버 {silver}</span>
+      <FlagBadge type="GOLD">골드 {gold}</FlagBadge>
+      <FlagBadge type="SILVER">실버 {silver}</FlagBadge>
     </span>
   );
 }
 
 export function TierBadge({ level }: { level: number }) {
-  const crown = level >= 4 ? "👑" : level >= 3 ? "🏅" : "🎖️";
   return (
     <span className="badge badge-gold">
-      {crown} {TIER_NAMES[level] ?? `Lv.${level}`}
+      <Icon name={level >= 4 ? "crown" : "medal"} size={12} />
+      {TIER_NAMES[level] ?? `Lv.${level}`}
     </span>
   );
 }
 
 export function VerifiedBadge() {
-  return <span className="badge badge-verified">✅ 공식 인증 매장</span>;
+  return (
+    <span className="badge badge-verified">
+      <Icon name="badgeCheck" size={12} />
+      공식 인증 매장
+    </span>
+  );
 }

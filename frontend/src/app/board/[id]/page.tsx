@@ -1,12 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
+import { Icon } from "@/components/Icon";
 import { ReportButton } from "@/components/ReportButton";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import type { Comment, Post } from "@/lib/types";
 
 export default function PostDetailPage() {
@@ -52,9 +54,7 @@ export default function PostDetailPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <Link href="/board" className="link-accent">
-          ← 게시판
-        </Link>
+        <BackLink href="/board" label="게시판" />
       </div>
 
       <div className="card">
@@ -64,7 +64,7 @@ export default function PostDetailPage() {
             티어 Lv.{post.author_tier_snapshot}
           </span>{" "}
           깃발 {post.author_flag_count_snapshot} ·{" "}
-          {new Date(post.created_at).toLocaleDateString("ko-KR")}
+          {formatDate(post.created_at)}
         </div>
         <p style={{ whiteSpace: "pre-wrap", marginTop: 12, fontSize: 15 }}>
           {post.content}
@@ -85,7 +85,8 @@ export default function PostDetailPage() {
               }
             }}
           >
-            ♥ {likes}
+            <Icon name="heart" size={16} strokeWidth={2} fill={liked} />
+            {likes}
           </button>
           <ReportButton targetType="POST" targetId={postId} label="글 신고" />
         </div>
@@ -130,7 +131,7 @@ export default function PostDetailPage() {
           <p style={{ fontSize: 14, margin: 0 }}>{c.content}</p>
           <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
             사용자 {c.user_id} ·{" "}
-            {new Date(c.created_at).toLocaleDateString("ko-KR")}
+            {formatDate(c.created_at)}
           </div>
         </div>
       ))}

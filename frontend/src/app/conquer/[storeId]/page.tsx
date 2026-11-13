@@ -1,15 +1,29 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackLink } from "@/components/BackLink";
+import { FlagIcon } from "@/components/badges";
+import { ConquestResult } from "@/components/ConquestResult";
+import { Icon } from "@/components/Icon";
 import { useGeolocation } from "@/components/useGeolocation";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDistance, formatShortDate, haversineM } from "@/lib/format";
 import type { ConquestResponse, Store } from "@/lib/types";
 
 type Mode = "GOLD" | "SILVER";
+
+// 골드 인증 반경 기본값 (서버 정책 CONQUEST_RADIUS_M). 화면 안내용이며
+// 실제 판정은 서버가 한다.
+const NEAR_M = 50;
+
+const EXIF_LABEL = {
+  HIGH: "촬영 정보 확인됨",
+  MEDIUM: "촬영 정보 일부 확인",
+  LOW: "촬영 정보 없음",
+} as const;
 
 export default function ConquerPage() {
   const params = useParams<{ storeId: string }>();
@@ -87,54 +101,26 @@ export default function ConquerPage() {
     }
   }
 
+  const distance =
+    coords && store ? haversineM(coords.lat, coords.lng, store.lat, store.lng) : null;
+
   if (result) {
     return (
-      <div className="page">
-        <div className="conquer-celebrate">
-          <div className="flag">
-            {result.upgraded_from_silver ? "🥈➜🥇" : mode === "GOLD" ? "🥇" : "🥈"}
-          </div>
-          <h2 style={{ margin: "12px 0 4px" }}>
-            {result.upgraded_from_silver ? "골드로 업그레이드!" : "정복 완료!"}
-          </h2>
-          <p className="muted">
-            {store?.name}에 {mode === "GOLD" ? "골드" : "실버"} 깃발을 꽂았습니다.
-          </p>
-          <div className="hero" style={{ marginTop: 20, textAlign: "left" }}>
-            <div className="big">+{result.exp_granted} EXP</div>
-            {result.tier_changed && (
-              <p style={{ color: "#f8e9d6", margin: "8px 0 0" }}>
-                🎉 티어가 Lv.{result.new_tier_level}로 상승했습니다!
-              </p>
-            )}
-            {result.is_flagged && (
-              <p style={{ color: "#ffd9d0", margin: "8px 0 0", fontSize: 13 }}>
-                ⚠️ 이상 패턴이 감지되어 검토 대기 상태입니다.
-                {result.abuse_reasons.map((r) => (
-                  <span key={r}> {r}.</span>
-                ))}
-              </p>
-            )}
-          </div>
-          <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
-            <Link href={`/stores/${storeId}`}>
-              <button className="btn btn-secondary">매장으로 돌아가기</button>
-            </Link>
-            <Link href="/profile">
-              <button className="btn btn-ghost">내 깃발 보기</button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <ConquestResult
+        result={result}
+        flagType={mode}
+        title="정복 완료!"
+        description={`${store?.name}에 ${mode === "GOLD" ? "골드" : "실버"} 깃발을 꽂았습니다.`}
+        storeHref={`/stores/${storeId}`}
+        storeLabel="매장으로 돌아가기"
+      />
     );
   }
 
   return (
     <div className="page">
-      <div className="page-header">
-        <Link href={`/stores/${storeId}`} className="link-accent">
-          ← 취소
-        </Link>
+      <div className="page-header" style={{ marginBottom: 14 }}>
+        <BackLink href={`/stores/${storeId}`} label="취소" />
         <div className="page-title" style={{ fontSize: 18 }}>
           정복하기
         </div>
@@ -149,21 +135,19 @@ export default function ConquerPage() {
         </div>
       )}
 
-      <div className="section-title">인증 방식</div>
-      <div className="pill-row">
+      <div className="section-title">어떻게 다녀오셨나요?</div>
+      <div className="tabs">
         <button
-          className={`badge ${mode === "GOLD" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab${mode === "GOLD" ? " on" : ""}`}
           onClick={() => setMode("GOLD")}
         >
-          🥇 실시간 (GPS+사진)
+          지금 여기예요
         </button>
         <button
-          className={`badge ${mode === "SILVER" ? "badge-gold" : "badge-silver"}`}
-          style={{ border: "none", cursor: "pointer", padding: "8px 14px" }}
+          className={`tab${mode === "SILVER" ? " on" : ""}`}
           onClick={() => setMode("SILVER")}
         >
-          🥈 과거 방문 등록
+          예전에 다녀왔어요
         </button>
       </div>
 
@@ -171,24 +155,35 @@ export default function ConquerPage() {
         {mode === "GOLD" ? (
           <>
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <span>📍 현재 위치</span>
-              <span className="muted" style={{ fontSize: 12 }}>
-                {coords
-                  ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-                  : "확인 중…"}
+              <span className="ii" style={{ fontWeight: 700 }}>
+                <Icon name="mapPin" size={16} />
+                현재 위치
               </span>
+              {distance == null ? (
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {geoError ? "확인 불가" : "확인 중…"}
+                </span>
+              ) : distance <= NEAR_M ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ok)" }}>
+                  매장 근처에 있어요
+                </span>
+              ) : (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>
+                  매장에서 {formatDistance(distance)} 떨어져 있어요
+                </span>
+              )}
             </div>
             {geoError && (
               <p className="error-text">{geoError} 매장 근처에서 시도하세요.</p>
             )}
-            <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-              매장 반경 50m 이내에서만 골드 깃발을 꽂을 수 있습니다. 경험치 100%.
+            <p className="muted" style={{ fontSize: 13, margin: "8px 0 0", lineHeight: 1.5 }}>
+              매장 가까이에서 인증하면 골드 깃발과 경험치를 모두 받아요.
             </p>
           </>
         ) : (
-          <p className="muted" style={{ fontSize: 13 }}>
-            과거에 방문한 빵집을 등록합니다. 경험치 50%, 하루 5곳까지.
-            나중에 재방문해 실시간 인증하면 골드로 업그레이드됩니다.
+          <p className="muted" style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+            예전에 다녀온 빵집도 사진과 함께 남길 수 있어요. 경험치 50%,
+            하루 5곳까지. 다시 가서 인증하면 골드로 바뀌어요.
           </p>
         )}
 
@@ -196,7 +191,8 @@ export default function ConquerPage() {
           className="btn btn-ghost"
           style={{ marginTop: 12, cursor: "pointer" }}
         >
-          {photoName ? `📷 ${photoName}` : "📷 사진 첨부"}
+          <Icon name="camera" size={18} strokeWidth={2.25} />
+          {photoName ?? "사진 첨부"}
           <input
             type="file"
             accept="image/*"
@@ -216,11 +212,8 @@ export default function ConquerPage() {
             }`}
             style={{ marginTop: 10 }}
           >
-            EXIF 신뢰도 {exif.trust}
-            {exif.captured_at
-              ? ` · 촬영 ${new Date(exif.captured_at).toLocaleDateString("ko-KR")}`
-              : ""}
-            {exif.has_gps ? " · GPS 포함" : ""}
+            {EXIF_LABEL[exif.trust]}
+            {exif.captured_at ? ` · ${formatShortDate(exif.captured_at)}` : ""}
           </div>
         )}
       </div>
@@ -233,7 +226,8 @@ export default function ConquerPage() {
         disabled={submitting || (mode === "GOLD" && !coords)}
         onClick={submit}
       >
-        {submitting ? "정복 중…" : "🚩 깃발 꽂기"}
+        {!submitting && <FlagIcon size={18} />}
+        {submitting ? "정복 중…" : "깃발 꽂기"}
       </button>
     </div>
   );
